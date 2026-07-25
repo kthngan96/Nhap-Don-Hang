@@ -749,6 +749,7 @@
   }
   function pad(n){return n<10?'0'+n:''+n;}
   function fmtVND(n){ n = Math.round(n||0); return n.toLocaleString('vi-VN'); }
+  function fmtReportMoney(n){ return Math.round((n||0)/1000).toLocaleString('vi-VN'); }
   function fmtDateVN(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
   function renderSelectedDate(){
     document.getElementById('dateDisplay').textContent=fmtDateVN(state.date);
@@ -1504,7 +1505,7 @@
         setLocationStatus('error',
           data && data.error==='ADDRESS_NOT_FOUND'
             ? 'Không tìm thấy địa chỉ; tọa độ vẫn được lưu.'
-            : 'Không đổi được GPS thành địa chỉ; tọa độ vẫn được lưu.',
+            : 'Toạ độ đã được lưu.',
           locationData
         );
         return;
@@ -1925,14 +1926,14 @@
 - Npp: ${s.npp}
 - NVBH: ${s.nvbh}
 - Tiến độ thời gian: ${daysReported}/${s.workDays} ngày (${pctTienDo.toFixed(0)}%)
-1. Doanh số thực hiện:( ĐVT :đ)
-- TH/CT (ngày): ${fmtVND(todayReport.revenue)}/${fmtVND(s.targetDaily)}/${pctNgay.toFixed(1)}%
-- CD/CT (tháng) ${fmtVND(cdRevenue)} /${fmtVND(s.targetMonthly)}/${pctThang.toFixed(1)}%
+1. Doanh số thực hiện (ĐVT: 000đ)
+- TH/CT ngày: ${fmtReportMoney(todayReport.revenue)}/${fmtReportMoney(s.targetDaily)}/${pctNgay.toFixed(1)}%
+- CD/CT tháng: ${fmtReportMoney(cdRevenue)}/${fmtReportMoney(s.targetMonthly)}/${pctThang.toFixed(1)}%
 2. Đơn hàng thành công: ${todayReport.orderCount}đh
 3. KPI
 - KPI 1 - ASO : ${todayReport.newCustomers.length}/${phoneSet.size}/${s.targetASO}/${pctASO.toFixed(0)}%
 - KPI 2 - CT ngày: ${daysAchieved}/${daysReported} ngày đạt
-- KPI 3 - Gia vị: ${fmtVND(todayReport.giaVi)}/${fmtVND(cdGiaVi)}/${fmtVND(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
+- KPI 3 - Gia vị: ${fmtReportMoney(todayReport.giaVi)}/${fmtReportMoney(cdGiaVi)}/${fmtReportMoney(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
 
     document.getElementById('reportText').textContent = text;
   }
