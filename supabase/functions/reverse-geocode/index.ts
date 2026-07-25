@@ -14,6 +14,53 @@ function json(status: number, body: Record<string, unknown>) {
   });
 }
 
+const districts = [
+  "Huyện Càng Long",
+  "Huyện Cầu Kè",
+  "Huyện Tiểu Cần",
+  "Huyện Châu Thành",
+  "Huyện Cầu Ngang",
+  "Huyện Trà Cú",
+  "Huyện Duyên Hải",
+  "Thành phố Trà Vinh",
+];
+
+function normalizePlace(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[.]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function canonicalDistrict(result: {
+  address_components?: Array<{ long_name?: string; types?: string[] }>;
+}) {
+  const candidates = (result.address_components ?? [])
+    .filter((component) =>
+      component.types?.includes("administrative_area_level_2") ||
+      component.types?.includes("locality")
+    )
+    .map((component) => normalizePlace(component.long_name ?? ""));
+
+  for (const district of districts) {
+    const canonical = normalizePlace(district);
+    const shortName = canonical
+      .replace(/^huyen /, "")
+      .replace(/^thanh pho /, "");
+    if (candidates.some((candidate) =>
+      candidate === canonical ||
+      candidate === shortName ||
+      candidate.endsWith(` ${shortName}`)
+    )) {
+      return district;
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -87,9 +134,11 @@ Deno.serve(async (request) => {
       return json(502, { error: "GEOCODER_UNAVAILABLE" });
     }
 
+    const bestResult = result.results[0];
     return json(200, {
-      address: result.results[0].formatted_address,
-      placeId: result.results[0].place_id ?? null,
+      address: bestResult.formatted_address,
+      district: canonicalDistrict(bestResult),
+      placeId: bestResult.place_id ?? null,
     });
   } catch (error) {
     console.error("Reverse geocoding failed", error);

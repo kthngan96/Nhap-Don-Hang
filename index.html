@@ -53,12 +53,19 @@
   header.topbar .sub{font-size:12.5px;color:#E8D4A8;opacity:.9;}
   .date-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
   .date-row label{font-size:12px;color:#E8D4A8;}
-  .date-row input[type=date]{
+  .date-control{
+    position:relative;display:inline-flex;align-items:center;gap:8px;min-width:154px;
     background:rgba(255,255,255,.12);
     border:1px solid rgba(255,255,255,.35);
-    color:#F3E7D0;border-radius:8px;padding:6px 8px;font-family:var(--font-mono);font-size:14px;
+    color:#F3E7D0;border-radius:8px;padding:6px 9px;
+    font-family:var(--font-mono);font-size:14px;
   }
-  .date-row input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.85;}
+  .date-control:focus-within{outline:2px solid var(--gold);outline-offset:1px;}
+  .date-control svg{width:17px;height:17px;margin-left:auto;opacity:.85;pointer-events:none;}
+  .date-control input[type=date]{
+    position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+  }
+  .vn-clock{margin-top:5px;font:500 11.5px/1.4 var(--font-mono);color:#E8D4A8;}
 
   main{flex:1;padding:14px 14px 96px;}
   .tab{display:none;animation:fade .15s ease;}
@@ -85,11 +92,11 @@
   }
   .field{margin-bottom:12px;}
   .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
-  .field input[type=text],.field input[type=tel],.field input[type=number],.field textarea{
+  .field input[type=text],.field input[type=search],.field input[type=date],.field input[type=tel],.field input[type=number],.field textarea,.field select{
     width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;
     font-family:var(--font-body);font-size:15px;color:var(--ink);background:#FDFBF6;
   }
-  .field input:focus,.field textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
   .field textarea{resize:vertical;min-height:56px;}
   .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
   .checkbox-row input{width:18px;height:18px;accent-color:var(--maroon);}
@@ -121,6 +128,7 @@
   .btn-gold:active{background:var(--gold-dark);}
   .btn-outline{background:transparent;color:var(--maroon);border:1.5px solid var(--maroon);}
   .btn-danger-outline{background:transparent;color:var(--red);border:1.5px solid var(--red);padding:7px 10px;font-size:12.5px;width:auto;}
+  .btn-delete-report{margin-top:10px;width:100%;padding:10px 14px;font-size:13.5px;}
   .order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .btn-mini{padding:7px 10px;font-size:12.5px;width:auto;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--font-body);border:1.5px solid transparent;}
   .btn-mini-outline{background:transparent;border-color:var(--maroon);color:var(--maroon);}
@@ -184,6 +192,50 @@
   .settings-grid{display:grid;grid-template-columns:1fr;gap:0;}
   details.price-details{margin-top:6px;}
   details.price-details summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--maroon);padding:8px 0;}
+
+  /* Order history */
+  .history-filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .history-filters .field{margin-bottom:0;}
+  .history-filters .wide{grid-column:1/-1;}
+  .history-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;background:#F3EBDD;border-radius:9px;}
+  .history-mode button{
+    border:0;border-radius:7px;padding:8px 7px;background:transparent;color:var(--ink-soft);
+    font:700 12px/1.3 var(--font-body);cursor:pointer;
+  }
+  .history-mode button.active{background:var(--paper);color:var(--maroon);box-shadow:var(--shadow);}
+  .history-date-range{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .history-date-control{
+    position:relative;display:flex;align-items:center;justify-content:space-between;
+    width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;
+    font:500 15px/1.45 var(--font-body);color:var(--ink);background:#FDFBF6;
+  }
+  .history-date-control:focus-within{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+  .history-date-control input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+  .history-date-control svg{width:17px;height:17px;color:var(--maroon);pointer-events:none;}
+  .history-filter-actions{display:flex;justify-content:flex-end;margin-top:12px;}
+  .history-filter-actions .btn{width:auto;padding:8px 12px;font-size:12.5px;}
+  .history-status{min-height:22px;font-size:12.5px;color:var(--ink-soft);margin:2px 2px 9px;}
+  .history-status.error{color:var(--red);}
+  .history-results[aria-busy=true]{opacity:.62;}
+  .history-day{margin:15px 0 8px;font-size:13px;font-weight:800;color:var(--maroon-dark);}
+  .history-day:first-child{margin-top:0;}
+  details.history-order{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden;
+  }
+  details.history-order summary{list-style:none;cursor:pointer;padding:13px 14px;}
+  details.history-order summary::-webkit-details-marker{display:none;}
+  .history-order-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .history-order-name{font-weight:700;font-size:14px;}
+  .history-order-revenue{font:700 13px/1.4 var(--font-mono);color:var(--maroon-dark);white-space:nowrap;}
+  .history-order-body{border-top:1px dashed var(--line);padding:12px 14px 14px;}
+  .history-skeleton{
+    height:104px;margin-bottom:10px;border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(90deg,#F8F3E8 25%,#FFFDF8 50%,#F8F3E8 75%);
+    background-size:200% 100%;animation:historyShimmer 1.15s infinite linear;
+  }
+  @keyframes historyShimmer{to{background-position:-200% 0;}}
+  .history-more{margin-top:12px;}
 
   /* Tabbar */
   nav.tabbar{
@@ -305,6 +357,9 @@
     .auth-card{padding:22px 17px;}
     .account-row{align-items:flex-start;flex-direction:column;gap:7px;}
     .btn-signout{align-self:flex-start;}
+    .history-filters{grid-template-columns:1fr;}
+    .history-filters .wide{grid-column:auto;}
+    .history-date-range{grid-template-columns:1fr;}
   }
   @media (prefers-reduced-motion:reduce){
     .tab,.location-btn{animation:none;transition:none;}
@@ -321,14 +376,14 @@
       </svg>
     </div>
     <h1>Sổ Báo Cáo NVBH</h1>
-    <p class="auth-copy">Đăng nhập bằng tài khoản do quản trị viên cung cấp.</p>
+    <p class="auth-copy">Đăng nhập bằng tên đăng nhập hoặc email do quản trị viên cung cấp.</p>
     <div class="field">
-      <label for="authEmail">Email</label>
-      <input type="email" id="authEmail" autocomplete="email" required placeholder="ten@congty.vn">
+      <label for="authEmail">Tên đăng nhập hoặc email</label>
+      <input type="text" id="authEmail" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="ten-dang-nhap hoặc ten@congty.vn">
     </div>
     <div class="field">
       <label for="authPassword">Mật khẩu</label>
-      <input type="password" id="authPassword" autocomplete="current-password" required minlength="6" placeholder="••••••••">
+      <input type="password" id="authPassword" autocomplete="current-password" required placeholder="Mật khẩu">
     </div>
     <button class="btn btn-primary" id="btnLogin" type="submit">Đăng nhập</button>
     <button class="auth-link" id="btnForgotPassword" type="button">Quên mật khẩu?</button>
@@ -366,8 +421,15 @@
     </div>
     <div class="date-row">
       <label for="dateInput">Ngày làm việc</label>
-      <input type="date" id="dateInput">
+      <div class="date-control">
+        <span id="dateDisplay">--/--/----</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>
+        </svg>
+        <input type="date" id="dateInput" lang="vi-VN" aria-label="Chọn ngày làm việc">
+      </div>
     </div>
+    <div class="vn-clock" id="currentDateTimeVN" aria-live="off"></div>
   </header>
 
   <main>
@@ -399,6 +461,12 @@
             </button>
           </div>
           <div class="location-result" id="locationResult" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="f_district">Huyện <span aria-hidden="true">*</span></label>
+          <select id="f_district" required>
+            <option value="">Chọn huyện</option>
+          </select>
         </div>
         <div class="field">
           <label for="f_sdt">Số điện thoại</label>
@@ -452,6 +520,7 @@
           <button class="btn btn-outline" id="btnCopy">📋 Sao chép</button>
           <button class="btn btn-primary" id="btnShare">📤 Chia sẻ / Gửi</button>
         </div>
+        <button class="btn btn-danger-outline btn-delete-report" id="btnDeleteReport" type="button">🗑 Xóa chốt ngày</button>
       </div>
 
       <div class="card" id="historyCard" style="display:none;">
@@ -461,6 +530,69 @@
           <tbody id="historyBody"></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- TAB: LỊCH SỬ ĐƠN HÀNG -->
+    <section class="tab" id="tab-history">
+      <div class="card">
+        <h2><span class="stt">↺</span> Lọc lịch sử đơn hàng</h2>
+        <div class="history-filters">
+          <div class="field wide">
+            <label>Thời gian</label>
+            <div class="history-mode" role="group" aria-label="Kiểu lọc ngày">
+              <button type="button" class="active" data-history-mode="single" aria-pressed="true">Một ngày</button>
+              <button type="button" data-history-mode="range" aria-pressed="false">Khoảng ngày</button>
+            </div>
+          </div>
+          <div class="field wide" id="historySingleDateWrap">
+            <label for="historySingleDate">Ngày</label>
+            <div class="history-date-control">
+              <span id="historySingleDateDisplay">--/--/----</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+              <input type="date" id="historySingleDate">
+            </div>
+          </div>
+          <div class="history-date-range wide" id="historyDateRangeWrap" hidden>
+            <div class="field">
+              <label for="historyDateFrom">Từ ngày</label>
+              <div class="history-date-control">
+                <span id="historyDateFromDisplay">--/--/----</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                <input type="date" id="historyDateFrom">
+              </div>
+            </div>
+            <div class="field">
+              <label for="historyDateTo">Đến ngày</label>
+              <div class="history-date-control">
+                <span id="historyDateToDisplay">--/--/----</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                <input type="date" id="historyDateTo">
+              </div>
+            </div>
+          </div>
+          <div class="field wide">
+            <label for="historyCustomer">Tên khách hàng</label>
+            <input type="search" id="historyCustomer" autocomplete="off" placeholder="Nhập tên có dấu hoặc không dấu">
+          </div>
+          <div class="field">
+            <label for="historyProduct">Sản phẩm</label>
+            <select id="historyProduct"><option value="">Tất cả sản phẩm</option></select>
+          </div>
+          <div class="field">
+            <label for="historyDistrict">Huyện</label>
+            <select id="historyDistrict">
+              <option value="">Tất cả huyện</option>
+              <option value="__UNKNOWN__">Chưa xác định</option>
+            </select>
+          </div>
+        </div>
+        <div class="history-filter-actions">
+          <button class="btn btn-outline" id="btnResetHistory" type="button">Đặt lại bộ lọc</button>
+        </div>
+      </div>
+      <div class="history-status" id="historyStatus" role="status" aria-live="polite"></div>
+      <div class="history-results" id="historyResults" aria-busy="false"></div>
+      <button class="btn btn-outline history-more" id="btnLoadMoreHistory" type="button" hidden>Tải thêm</button>
     </section>
 
     <!-- TAB: CẤU HÌNH -->
@@ -489,6 +621,7 @@
     <button data-tab="order" class="active"><span class="dot"></span>Nhập đơn</button>
     <button data-tab="today"><span class="dot"></span>Đơn hôm nay</button>
     <button data-tab="report"><span class="dot"></span>Báo cáo</button>
+    <button data-tab="history"><span class="dot"></span>Lịch sử</button>
     <button data-tab="settings"><span class="dot"></span>Cấu hình</button>
   </nav>
 </div>
@@ -535,6 +668,17 @@
     {id:'bot_canh_tom',    name:'Bột canh tôm',                    shortLabel:'Bột canh tôm',            price:4600,  cat:'gia_vi'},
     {id:'bot_canh_nam',    name:'Bột canh nấm',                    shortLabel:'Bột canh nấm',            price:4600,  cat:'gia_vi'},
   ];
+  const DISTRICTS = [
+    'Huyện Càng Long',
+    'Huyện Cầu Kè',
+    'Huyện Tiểu Cần',
+    'Huyện Châu Thành',
+    'Huyện Cầu Ngang',
+    'Huyện Trà Cú',
+    'Huyện Duyên Hải',
+    'Thành phố Trà Vinh'
+  ];
+  const HISTORY_PAGE_SIZE = 30;
 
   const DEFAULT_SETTINGS = {
     npp:'Thuận Lợi - Trà Vinh',
@@ -558,26 +702,68 @@
         auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
       })
     : null;
+  const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
   let recoveryMode = false;
   let bootingForUser = null;
+  function createHistoryState(){
+    return {
+      initialized:false,
+      dirty:true,
+      loading:false,
+      requestId:0,
+      rows:[],
+      cursor:null,
+      hasMore:false,
+      filters:{
+        mode:'single',
+        singleDate:'',
+        dateFrom:'',
+        dateTo:'',
+        customer:'',
+        productId:'',
+        district:''
+      }
+    };
+  }
   let state = {
     date: todayStr(),
     settings: Object.assign({}, DEFAULT_SETTINGS),
     orders: [],
     session: null,
     user: null,
-    pendingLocation: null
+    pendingLocation: null,
+    history:createHistoryState()
   };
 
   // ---------- HELPERS ----------
+  function datePartsInVietnam(date){
+    const parts=new Intl.DateTimeFormat('en-CA',{
+      timeZone:VIETNAM_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'
+    }).formatToParts(date);
+    return Object.fromEntries(parts.filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  }
   function todayStr(){
-    const d = new Date();
-    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    const parts=datePartsInVietnam(new Date());
+    return parts.year+'-'+parts.month+'-'+parts.day;
   }
   function pad(n){return n<10?'0'+n:''+n;}
   function fmtVND(n){ n = Math.round(n||0); return n.toLocaleString('vi-VN'); }
   function fmtDateVN(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+  function renderSelectedDate(){
+    document.getElementById('dateDisplay').textContent=fmtDateVN(state.date);
+  }
+  function renderCurrentDateTimeVN(){
+    const parts=Object.fromEntries(
+      new Intl.DateTimeFormat('vi-VN',{
+        timeZone:VIETNAM_TIME_ZONE,weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',
+        hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
+      }).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value])
+    );
+    document.getElementById('currentDateTimeVN').textContent=
+      'Giờ Việt Nam: '+parts.weekday+', '+parts.day+'/'+parts.month+'/'+parts.year+
+      ' · '+parts.hour+':'+parts.minute+':'+parts.second+' GMT+7';
+  }
   function monthKey(iso){ return iso.slice(0,7); }
   function safeDiv(a,b){ return b>0 ? (a/b*100) : 0; }
   function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -638,6 +824,55 @@
   function mapUrl(location){
     return 'https://www.google.com/maps?q='+encodeURIComponent(location.latitude+','+location.longitude);
   }
+  function normalizePlace(value){
+    return String(value||'')
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu,'')
+      .replace(/đ/g,'d')
+      .replace(/Đ/g,'D')
+      .replace(/[.]/g,'')
+      .replace(/\s+/g,' ')
+      .trim()
+      .toLowerCase();
+  }
+  function districtFromAddress(value){
+    const normalized=normalizePlace(value);
+    return DISTRICTS.find(district=>{
+      const canonical=normalizePlace(district);
+      const shortName=canonical.replace(/^huyen /,'').replace(/^thanh pho /,'');
+      if(district==='Thành phố Trà Vinh'){
+        return normalized.includes(canonical) || normalized.includes('tp tra vinh');
+      }
+      return normalized.includes(canonical) || normalized.includes(shortName);
+    }) || '';
+  }
+  function orderMetadata(order){
+    const values=[];
+    if(order.district && districtFromAddress(order.diaChi)!==order.district) values.push(order.district);
+    if(order.diaChi) values.push(order.diaChi);
+    if(order.sdt) values.push(order.sdt);
+    return values.map(esc).join(' · ');
+  }
+  function normalizeUsername(value){
+    return String(value||'').trim().toLowerCase();
+  }
+  function isUsername(value){
+    return /^[a-z0-9._-]{3,32}$/.test(value);
+  }
+  async function sha256Hex(value){
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256',bytes);
+    return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+  }
+  async function authCredentials(identifier,password){
+    const normalized = normalizeUsername(identifier);
+    if(identifier.includes('@')) return {email:normalized,password};
+    if(!isUsername(normalized)) throw new Error('INVALID_USERNAME');
+    return {
+      email:normalized+'@nhap-don-hang.local',
+      password:await sha256Hex('nhap-don-hang:v1:'+normalized+':'+password)
+    };
+  }
 
   // ---------- AUTH / ONLINE GATE ----------
   function showAuth(){
@@ -649,7 +884,8 @@
   function showApp(){
     document.getElementById('authShell').hidden = true;
     document.getElementById('app').hidden = false;
-    document.getElementById('accountEmail').textContent = state.user && state.user.email || '';
+    const metadata = state.user && state.user.user_metadata || {};
+    document.getElementById('accountEmail').textContent = metadata.username || (state.user && state.user.email) || '';
   }
   function clearAccountState(){
     bootingForUser = null;
@@ -658,13 +894,15 @@
     state.settings = Object.assign({}, DEFAULT_SETTINGS, {prices:{}});
     state.orders = [];
     state.pendingLocation = null;
+    state.history = createHistoryState();
     resetOrderForm();
     renderToday();
+    renderHistory();
   }
   function syncOnlineState(){
     const offline = !navigator.onLine;
     document.getElementById('offlineGate').hidden = !offline;
-    document.querySelectorAll('#app button,#app input,#app textarea').forEach(el=>{
+    document.querySelectorAll('#app button,#app input,#app textarea,#app select').forEach(el=>{
       if(offline){
         if(!Object.prototype.hasOwnProperty.call(el.dataset,'offlineDisabled')){
           el.dataset.offlineDisabled = el.disabled ? '0' : '1';
@@ -698,6 +936,7 @@
     bootingForUser = state.user.id;
     try{
       document.getElementById('dateInput').value = state.date;
+      renderSelectedDate();
       await maybeImportLegacyData();
       await Promise.all([loadSettings(), loadOrdersForDate(state.date)]);
       renderProductRows();
@@ -721,13 +960,20 @@
     const button = document.getElementById('btnLogin');
     await runButtonAction(button, 'Đang đăng nhập…', async ()=>{
       setAuthMessage('');
-      const email = document.getElementById('authEmail').value.trim();
+      const identifier = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
-      const {error} = await client.auth.signInWithPassword({email,password});
+      let credentials;
+      try{
+        credentials = await authCredentials(identifier,password);
+      }catch(error){
+        setAuthMessage('Tên đăng nhập chỉ gồm chữ thường, số, dấu chấm, gạch ngang hoặc gạch dưới (3–32 ký tự).','error');
+        return;
+      }
+      const {error} = await client.auth.signInWithPassword(credentials);
       if(error){
         setAuthMessage(
           error.message && error.message.toLowerCase().includes('invalid')
-            ? 'Email hoặc mật khẩu không đúng.'
+            ? 'Tên đăng nhập/email hoặc mật khẩu không đúng.'
             : 'Không thể đăng nhập. Vui lòng thử lại.',
           'error'
         );
@@ -739,10 +985,14 @@
       setAuthMessage('Chưa cấu hình Supabase. Xem file SUPABASE_SETUP.md.', 'error');
       return;
     }
-    const email = document.getElementById('authEmail').value.trim();
+    const email = document.getElementById('authEmail').value.trim().toLowerCase();
     if(!email){
       setAuthMessage('Nhập email để nhận liên kết đặt lại mật khẩu.', 'error');
       document.getElementById('authEmail').focus();
+      return;
+    }
+    if(!email.includes('@')){
+      setAuthMessage('Tài khoản dùng tên đăng nhập cần liên hệ quản trị viên để đặt lại mật khẩu.', 'error');
       return;
     }
     const button = document.getElementById('btnForgotPassword');
@@ -858,6 +1108,7 @@
       work_date:date,
       customer_name:order.kh || '',
       address:order.diaChi || '',
+      district:order.district || districtFromAddress(order.diaChi) || null,
       phone:order.sdt || '',
       is_new:Boolean(order.isNew),
       note:order.ghiChu || '',
@@ -915,6 +1166,7 @@
         throwQueryError(error,'Không thể nhập báo cáo cũ.');
       }
       await legacySet('legacy:migratedTo',state.user.id);
+      invalidateHistory();
       showToast('Đã nhập dữ liệu cũ vào tài khoản.');
     }catch(error){
       console.error(error);
@@ -943,8 +1195,10 @@
     return {
       id:row.id,
       stt:index+1,
+      workDate:row.work_date,
       kh:row.customer_name,
       diaChi:row.address || '',
+      district:row.district || '',
       sdt:row.phone || '',
       isNew:Boolean(row.is_new),
       ghiChu:row.note || '',
@@ -1020,10 +1274,20 @@
       (p.cat==='mi'?miWrap:gvWrap).appendChild(row);
     });
   }
+  function renderFilterOptions(){
+    const districtOptions=DISTRICTS.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
+    document.getElementById('f_district').insertAdjacentHTML('beforeend',districtOptions);
+    document.getElementById('historyDistrict').insertAdjacentHTML('beforeend',districtOptions);
+    document.getElementById('historyProduct').insertAdjacentHTML(
+      'beforeend',
+      PRODUCTS.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')
+    );
+  }
 
   function resetOrderForm(){
     document.getElementById('f_kh').value='';
     document.getElementById('f_diachi').value='';
+    document.getElementById('f_district').value='';
     document.getElementById('f_sdt').value='';
     document.getElementById('f_isnew').checked=false;
     document.getElementById('f_ghichu').value='';
@@ -1041,6 +1305,12 @@
     if(!requireOnline()) return;
     const kh = document.getElementById('f_kh').value.trim();
     if(!kh){ showToast('Vui lòng nhập tên khách hàng'); document.getElementById('f_kh').focus(); return; }
+    const district = document.getElementById('f_district').value;
+    if(!DISTRICTS.includes(district)){
+      showToast('Vui lòng chọn huyện');
+      document.getElementById('f_district').focus();
+      return;
+    }
     const items = {};
     PRODUCTS.forEach(p=>{
       const ban = Number(document.getElementById('ban_'+p.id).value)||0;
@@ -1052,6 +1322,7 @@
       stt: state.orders.length+1,
       kh,
       diaChi: document.getElementById('f_diachi').value.trim(),
+      district,
       sdt: document.getElementById('f_sdt').value.trim(),
       isNew: document.getElementById('f_isnew').checked,
       ghiChu: document.getElementById('f_ghichu').value.trim(),
@@ -1064,6 +1335,7 @@
       const {error} = await client.from('orders').insert(orderToRow(order,state.date));
       if(error){ showToast(dbError(error,'Không thể lưu đơn hàng.').message); return; }
       state.orders.push(order);
+      invalidateHistory();
       resetOrderForm();
       renderToday();
       switchTab('today');
@@ -1083,6 +1355,7 @@
       if(error){ showToast(dbError(error,'Không thể xóa đơn hàng.').message); return; }
       state.orders = state.orders.filter(o=>o.id!==id);
       state.orders.forEach((o,idx)=>o.stt=idx+1);
+      invalidateHistory();
       renderToday();
     }finally{
       state.deletingIds.delete(id);
@@ -1113,7 +1386,7 @@
       return '<div class="order-card">'+
         '<div class="row1">'+
           '<div><div class="kh">Đơn '+o.stt+' — '+esc(o.kh)+'</div>'+
-          '<div class="meta">'+esc(o.diaChi||'')+(o.sdt?' · '+esc(o.sdt):'')+'</div></div>'+
+          '<div class="meta">'+orderMetadata(o)+'</div></div>'+
           (o.isNew?'<span class="badge-new">Khách mới</span>':'')+
         '</div>'+
         '<div class="items">'+(itemsTxt||'<i>Không có sản phẩm</i>')+'</div>'+
@@ -1203,6 +1476,9 @@
         return;
       }
       document.getElementById('f_diachi').value=data.address;
+      if(data.district && DISTRICTS.includes(data.district)){
+        document.getElementById('f_district').value=data.district;
+      }
       setLocationStatus('success','Đã điền địa chỉ từ GPS.',locationData);
     }catch(error){
       console.error(error);
@@ -1249,6 +1525,7 @@
     lines.push('Đơn '+o.stt);
     lines.push('KH: '+o.kh);
     lines.push('Địa chỉ: '+(o.diaChi||''));
+    lines.push('Huyện: '+(o.district||'Chưa xác định'));
     if(o.location) lines.push('Bản đồ: '+mapUrl(o.location));
     lines.push('SĐT: '+(o.sdt||''));
     PRODUCTS.forEach(p=>{
@@ -1264,6 +1541,218 @@
   function shareOrderMessage(id){
     const o = state.orders.find(x=>x.id===id);
     if(o) shareText('Đơn hàng '+o.stt+' - '+o.kh, buildOrderMessage(o));
+  }
+
+  // ---------- ORDER HISTORY ----------
+  let historyRequestSerial=0;
+  let historyCustomerTimer=null;
+  function isHistoryTabActive(){
+    return document.getElementById('tab-history').classList.contains('active');
+  }
+  function invalidateHistory(){
+    state.history.dirty=true;
+    historyRequestSerial++;
+  }
+  function historyDates(){
+    const filters=state.history.filters;
+    if(filters.mode==='single'){
+      return {from:filters.singleDate,to:filters.singleDate};
+    }
+    return {from:filters.dateFrom,to:filters.dateTo};
+  }
+  function syncHistoryControls(){
+    const filters=state.history.filters;
+    document.querySelectorAll('[data-history-mode]').forEach(button=>{
+      const active=button.dataset.historyMode===filters.mode;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
+    document.getElementById('historySingleDateWrap').hidden=filters.mode!=='single';
+    document.getElementById('historyDateRangeWrap').hidden=filters.mode!=='range';
+    document.getElementById('historySingleDate').value=filters.singleDate;
+    document.getElementById('historyDateFrom').value=filters.dateFrom;
+    document.getElementById('historyDateTo').value=filters.dateTo;
+    document.getElementById('historySingleDateDisplay').textContent=fmtDateVN(filters.singleDate);
+    document.getElementById('historyDateFromDisplay').textContent=fmtDateVN(filters.dateFrom);
+    document.getElementById('historyDateToDisplay').textContent=fmtDateVN(filters.dateTo);
+    document.getElementById('historyCustomer').value=filters.customer;
+    document.getElementById('historyProduct').value=filters.productId;
+    document.getElementById('historyDistrict').value=filters.district;
+  }
+  function initializeHistoryFilters(){
+    const filters=state.history.filters;
+    if(!filters.singleDate){
+      filters.singleDate=state.date;
+      filters.dateFrom=state.date;
+      filters.dateTo=state.date;
+    }
+    syncHistoryControls();
+  }
+  function readHistoryFilters(){
+    const filters=state.history.filters;
+    filters.singleDate=document.getElementById('historySingleDate').value || state.date;
+    filters.dateFrom=document.getElementById('historyDateFrom').value || state.date;
+    filters.dateTo=document.getElementById('historyDateTo').value || state.date;
+    filters.customer=document.getElementById('historyCustomer').value.trim();
+    filters.productId=document.getElementById('historyProduct').value;
+    filters.district=document.getElementById('historyDistrict').value;
+  }
+  function historyItemsHtml(order){
+    return Object.keys(order.items||{}).map(pid=>{
+      const product=PRODUCTS.find(p=>p.id===pid);
+      const quantities=order.items[pid] || {};
+      let text=esc(product ? product.name : pid)+': <b>'+Number(quantities.ban||0)+'</b> gói';
+      if(Number(quantities.tang||0)>0) text+=' (tặng '+Number(quantities.tang)+' gói)';
+      return text;
+    }).join('<br>');
+  }
+  function renderHistory(){
+    const history=state.history;
+    const results=document.getElementById('historyResults');
+    const status=document.getElementById('historyStatus');
+    const loadMore=document.getElementById('btnLoadMoreHistory');
+    results.setAttribute('aria-busy',String(history.loading));
+    loadMore.hidden=!history.hasMore || history.loading;
+    loadMore.disabled=history.loading;
+
+    if(history.loading && !history.rows.length){
+      status.className='history-status';
+      status.textContent='Đang tải lịch sử…';
+      results.innerHTML='<div class="history-skeleton"></div><div class="history-skeleton"></div><div class="history-skeleton"></div>';
+      return;
+    }
+    if(!history.rows.length){
+      status.className='history-status';
+      status.textContent=history.initialized ? '0 đơn phù hợp' : '';
+      results.innerHTML=history.initialized
+        ? '<div class="empty">Không tìm thấy đơn hàng phù hợp với bộ lọc.</div>'
+        : '';
+      return;
+    }
+
+    status.className='history-status';
+    status.textContent=history.loading
+      ? 'Đang tải dữ liệu mới…'
+      : 'Đã tải '+history.rows.length+' đơn'+(history.hasMore?' · còn dữ liệu':'');
+    let currentDate='';
+    results.innerHTML=history.rows.map(order=>{
+      const dateHeading=order.workDate!==currentDate
+        ? (currentDate=order.workDate,'<div class="history-day">'+fmtDateVN(order.workDate)+'</div>')
+        : '';
+      const metadata=order.district
+        ? orderMetadata(order)
+        : ['Chưa xác định',order.diaChi,order.sdt].filter(Boolean).map(esc).join(' · ');
+      return dateHeading+
+        '<details class="history-order">'+
+          '<summary><div class="history-order-head">'+
+            '<div><div class="history-order-name">'+esc(order.kh)+'</div>'+
+            '<div class="meta">'+metadata+'</div></div>'+
+            '<div class="history-order-revenue">'+fmtVND(orderRevenue(order))+'đ</div>'+
+          '</div></summary>'+
+          '<div class="history-order-body">'+
+            '<div class="items">'+(historyItemsHtml(order)||'<i>Không có sản phẩm</i>')+'</div>'+
+            (order.ghiChu?'<div class="meta" style="margin-top:7px;">Ghi chú: '+esc(order.ghiChu)+'</div>':'')+
+            (order.location?'<div class="meta" style="margin-top:7px;"><a class="map-link" href="'+mapUrl(order.location)+'" target="_blank" rel="noopener noreferrer">↗ Mở trên bản đồ</a></div>':'')+
+            '<div class="order-actions">'+
+              '<button class="btn-mini btn-mini-outline" data-history-action="copy" data-order-id="'+esc(order.id)+'">📋 Sao chép</button>'+
+              '<button class="btn-mini btn-mini-solid" data-history-action="share" data-order-id="'+esc(order.id)+'">📤 Chia sẻ</button>'+
+            '</div>'+
+          '</div>'+
+        '</details>';
+    }).join('');
+  }
+  function renderHistoryError(message){
+    const status=document.getElementById('historyStatus');
+    status.className='history-status error';
+    status.textContent=message;
+    state.history.loading=false;
+    document.getElementById('historyResults').setAttribute('aria-busy','false');
+    document.getElementById('btnLoadMoreHistory').disabled=false;
+    if(!state.history.rows.length){
+      document.getElementById('historyResults').innerHTML=
+        '<div class="empty">Không thể tải lịch sử.<br><button class="btn-mini btn-mini-outline" data-history-action="retry">Thử lại</button></div>';
+    }
+  }
+  async function loadHistory(append){
+    if(!requireOnline()) return;
+    const dates=historyDates();
+    if(!dates.from || !dates.to || dates.from>dates.to){
+      renderHistoryError('Khoảng ngày không hợp lệ.');
+      return;
+    }
+    const history=state.history;
+    if(history.loading && append) return;
+    const requestId=++historyRequestSerial;
+    const userId=state.user.id;
+    history.loading=true;
+    if(!append) history.hasMore=false;
+    renderHistory();
+
+    const cursor=append ? history.cursor : null;
+    const {data,error}=await client.rpc('search_order_history',{
+      p_date_from:dates.from,
+      p_date_to:dates.to,
+      p_customer:history.filters.customer || null,
+      p_product_id:history.filters.productId || null,
+      p_district:history.filters.district || null,
+      p_cursor_work_date:cursor && cursor.workDate || null,
+      p_cursor_created_at:cursor && cursor.createdAt || null,
+      p_cursor_id:cursor && cursor.id || null,
+      p_page_size:HISTORY_PAGE_SIZE
+    });
+    if(requestId!==historyRequestSerial || !state.user || state.user.id!==userId) return;
+    if(error){
+      console.error(error);
+      renderHistoryError(dbError(error,'Không thể tải lịch sử đơn hàng.').message);
+      return;
+    }
+
+    const page=(data||[]);
+    const visible=page.slice(0,HISTORY_PAGE_SIZE).map((row,index)=>
+      rowToOrder(row,(append ? history.rows.length : 0)+index)
+    );
+    history.rows=append
+      ? history.rows.concat(visible.filter(order=>!history.rows.some(existing=>existing.id===order.id)))
+      : visible;
+    history.hasMore=page.length>HISTORY_PAGE_SIZE;
+    const last=visible[visible.length-1];
+    history.cursor=last ? {workDate:last.workDate,createdAt:last.createdAt,id:last.id} : history.cursor;
+    history.initialized=true;
+    history.dirty=false;
+    history.loading=false;
+    renderHistory();
+  }
+  function reloadHistory(){
+    readHistoryFilters();
+    syncHistoryControls();
+    state.history.cursor=null;
+    state.history.dirty=true;
+    loadHistory(false).catch(error=>renderHistoryError(error.message));
+  }
+  function scheduleHistoryReload(){
+    clearTimeout(historyCustomerTimer);
+    historyCustomerTimer=setTimeout(reloadHistory,350);
+  }
+  function resetHistoryFilters(){
+    state.history.filters={
+      mode:'single',
+      singleDate:state.date,
+      dateFrom:state.date,
+      dateTo:state.date,
+      customer:'',
+      productId:'',
+      district:''
+    };
+    syncHistoryControls();
+    reloadHistory();
+  }
+  function copyHistoryOrder(id){
+    const order=state.history.rows.find(item=>item.id===id);
+    if(order) copyText(buildOrderMessage(order),'Đã sao chép đơn của '+order.kh);
+  }
+  function shareHistoryOrder(id){
+    const order=state.history.rows.find(item=>item.id===id);
+    if(order) shareText('Đơn hàng - '+order.kh,buildOrderMessage(order));
   }
 
   // ---------- FINALIZE / REPORT ----------
@@ -1294,6 +1783,35 @@
       if(error){ showToast(dbError(error,'Không thể chốt báo cáo.').message); return; }
       showToast('Đã chốt ngày '+fmtDateVN(state.date));
       await renderReportTab();
+    });
+  }
+  async function deleteFinalizedReport(){
+    if(!requireOnline()) return;
+    const date=state.date;
+    const userId=state.user.id;
+    const confirmed=confirm(
+      'Xóa chốt báo cáo ngày '+fmtDateVN(date)+'?\n\n'+
+      'Đơn hàng của ngày này sẽ không bị xóa và bạn có thể chốt lại sau.'
+    );
+    if(!confirmed) return;
+
+    const button=document.getElementById('btnDeleteReport');
+    await runButtonAction(button,'Đang xóa…',async ()=>{
+      const {data,error}=await client.from('daily_reports')
+        .delete()
+        .eq('user_id',userId)
+        .eq('work_date',date)
+        .select('work_date');
+      if(error){
+        showToast(dbError(error,'Không thể xóa chốt báo cáo.').message);
+        return;
+      }
+      await renderReportTab();
+      showToast(
+        data && data.length
+          ? 'Đã xóa chốt ngày '+fmtDateVN(date)
+          : 'Báo cáo ngày '+fmtDateVN(date)+' không còn tồn tại.'
+      );
     });
   }
 
@@ -1379,6 +1897,7 @@
   document.getElementById('btnShare').addEventListener('click', ()=>{
     shareText('Báo cáo ngày', document.getElementById('reportText').textContent);
   });
+  document.getElementById('btnDeleteReport').addEventListener('click',deleteFinalizedReport);
 
   // ---------- SETTINGS TAB ----------
   function renderSettingsForm(){
@@ -1435,6 +1954,13 @@
     document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
     if(name==='today') renderToday();
     if(name==='report') renderReportTab().catch(error=>showToast(error.message));
+    if(name==='history'){
+      initializeHistoryFilters();
+      renderHistory();
+      if(state.history.dirty && !state.history.loading){
+        loadHistory(false).catch(error=>renderHistoryError(error.message));
+      }
+    }
     if(name==='settings') renderSettingsForm();
   }
   document.querySelectorAll('nav.tabbar button').forEach(b=>{
@@ -1443,8 +1969,14 @@
 
   // ---------- DATE CHANGE ----------
   document.getElementById('dateInput').addEventListener('change', async (e)=>{
-    if(!requireOnline()) return;
+    if(!requireOnline()){
+      e.target.value=state.date;
+      renderSelectedDate();
+      return;
+    }
     state.date = e.target.value || todayStr();
+    e.target.value=state.date;
+    renderSelectedDate();
     try{
       await loadOrdersForDate(state.date);
       renderToday();
@@ -1464,6 +1996,28 @@
     if(button.dataset.orderAction==='copy') copyOrderMessage(id);
     if(button.dataset.orderAction==='share') shareOrderMessage(id);
     if(button.dataset.orderAction==='delete') deleteOrder(id);
+  });
+  document.querySelectorAll('[data-history-mode]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      state.history.filters.mode=button.dataset.historyMode;
+      syncHistoryControls();
+      reloadHistory();
+    });
+  });
+  ['historySingleDate','historyDateFrom','historyDateTo','historyProduct','historyDistrict'].forEach(id=>{
+    document.getElementById(id).addEventListener('change',reloadHistory);
+  });
+  document.getElementById('historyCustomer').addEventListener('input',scheduleHistoryReload);
+  document.getElementById('btnResetHistory').addEventListener('click',resetHistoryFilters);
+  document.getElementById('btnLoadMoreHistory').addEventListener('click',()=>{
+    loadHistory(true).catch(error=>renderHistoryError(error.message));
+  });
+  document.getElementById('historyResults').addEventListener('click',event=>{
+    const button=event.target.closest('[data-history-action]');
+    if(!button) return;
+    if(button.dataset.historyAction==='copy') copyHistoryOrder(button.dataset.orderId);
+    if(button.dataset.historyAction==='share') shareHistoryOrder(button.dataset.orderId);
+    if(button.dataset.historyAction==='retry') reloadHistory();
   });
   document.getElementById('btnAddOrder').addEventListener('click', addOrder);
   document.getElementById('btnFinalize').addEventListener('click', finalizeDay);
@@ -1486,6 +2040,12 @@
 
   // ---------- INIT ----------
   async function initAuth(){
+    renderCurrentDateTimeVN();
+    setInterval(renderCurrentDateTimeVN,1000);
+    renderFilterOptions();
+    // Keep the 13 product inputs visible even when account data cannot load.
+    // They are rendered again after settings load to apply custom prices.
+    renderProductRows();
     syncOnlineState();
     if(!client){
       showAuth();

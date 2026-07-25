@@ -1,3 +1,18 @@
 # Local-only secrets for Supabase Edge Functions
 supabase/functions/.env
 supabase/functions/.env.*
+
+# Generated/local Supabase state
+supabase/.temp/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.old
