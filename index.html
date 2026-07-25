@@ -847,7 +847,7 @@
     if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'o'+Date.now()+Math.floor(Math.random()*1000000);
   }
-  function mapUrl(location){
+  function buildMapUrl(location){
     return 'https://www.google.com/maps?q='+encodeURIComponent(location.latitude+','+location.longitude);
   }
   function normalizePlace(value){
@@ -1425,7 +1425,7 @@
         '</div>'+
         '<div class="items">'+(itemsTxt||'<i>Không có sản phẩm</i>')+'</div>'+
         (o.ghiChu?'<div class="meta" style="margin-top:6px;">Ghi chú: '+esc(o.ghiChu)+'</div>':'')+
-        (o.location?'<div class="meta" style="margin-top:6px;"><a class="map-link" href="'+mapUrl(o.location)+'" target="_blank" rel="noopener noreferrer">↗ Mở trên bản đồ</a></div>':'')+
+        (o.location?'<div class="meta" style="margin-top:6px;"><a class="map-link" href="'+buildMapUrl(o.location)+'" target="_blank" rel="noopener noreferrer">↗ Mở trên bản đồ</a></div>':'')+
         '<div class="revenue">Doanh số: '+fmtVND(orderRevenue(o))+'đ</div>'+
         '<div class="order-actions">'+
           '<button class="btn-mini btn-mini-outline" data-order-action="copy" data-order-id="'+esc(o.id)+'">📋 Sao chép mẫu</button>'+
@@ -1456,7 +1456,7 @@
     }
     if(location){
       const link=document.createElement('a');
-      link.href=mapUrl(location);
+      link.href=buildMapUrl(location);
       link.target='_blank';
       link.rel='noopener noreferrer';
       link.textContent='Mở bản đồ';
@@ -1557,7 +1557,7 @@
     lines.push('KH: '+o.kh);
     lines.push('Địa chỉ: '+(o.diaChi||''));
     lines.push('Huyện: '+(o.district||'Chưa xác định'));
-    if(o.location) lines.push('Bản đồ: '+mapUrl(o.location));
+    if(o.location) lines.push('Bản đồ: '+buildMapUrl(o.location));
     lines.push('SĐT: '+(o.sdt||''));
     PRODUCTS.forEach(p=>{
       lines.push('+ '+p.shortLabel+': '+itemLine(o.items[p.id]));
@@ -1565,13 +1565,29 @@
     if(o.ghiChu) lines.push('Ghi chú: '+o.ghiChu);
     return lines.join('\n');
   }
+  async function shareOrderToZalo(order){
+    const text = buildOrderMessage(order);
+    const title = 'Đơn hàng '+(order.stt || '')+' - '+order.kh;
+    if(navigator.share){
+      try{
+        await navigator.share({title, text});
+        return;
+      }catch(error){
+        console.warn('Share sheet unavailable or canceled; copying order instead.', error);
+      }
+    }
+    await copyText(text, order.location
+      ? 'Không mở được Zalo, đã sao chép đơn kèm bản đồ'
+      : 'Không mở được Zalo, đã sao chép đơn'
+    );
+  }
   function copyOrderMessage(id){
     const o = state.orders.find(x=>x.id===id);
     if(o) copyText(buildOrderMessage(o), 'Đã sao chép mẫu đơn '+o.stt);
   }
   function shareOrderMessage(id){
     const o = state.orders.find(x=>x.id===id);
-    if(o) shareText('Đơn hàng '+o.stt+' - '+o.kh, buildOrderMessage(o));
+    if(o) shareOrderToZalo(o);
   }
 
   // ---------- ORDER HISTORY ----------
@@ -1682,10 +1698,10 @@
           '<div class="history-order-body">'+
             '<div class="items">'+(historyItemsHtml(order)||'<i>Không có sản phẩm</i>')+'</div>'+
             (order.ghiChu?'<div class="meta" style="margin-top:7px;">Ghi chú: '+esc(order.ghiChu)+'</div>':'')+
-            (order.location?'<div class="meta" style="margin-top:7px;"><a class="map-link" href="'+mapUrl(order.location)+'" target="_blank" rel="noopener noreferrer">↗ Mở trên bản đồ</a></div>':'')+
+            (order.location?'<div class="meta" style="margin-top:7px;"><a class="map-link" href="'+buildMapUrl(order.location)+'" target="_blank" rel="noopener noreferrer">↗ Mở trên bản đồ</a></div>':'')+
             '<div class="order-actions">'+
               '<button class="btn-mini btn-mini-outline" data-history-action="copy" data-order-id="'+esc(order.id)+'">📋 Sao chép</button>'+
-              '<button class="btn-mini btn-mini-solid" data-history-action="share" data-order-id="'+esc(order.id)+'">📤 Chia sẻ</button>'+
+              '<button class="btn-mini btn-mini-solid" data-history-action="share" data-order-id="'+esc(order.id)+'">📤 Gửi Zalo</button>'+
             '</div>'+
           '</div>'+
         '</details>';
@@ -1782,7 +1798,7 @@
   }
   function shareHistoryOrder(id){
     const order=state.history.rows.find(item=>item.id===id);
-    if(order) shareText('Đơn hàng - '+order.kh,buildOrderMessage(order));
+    if(order) shareOrderToZalo(order);
   }
 
   // ---------- FINALIZE / REPORT ----------
