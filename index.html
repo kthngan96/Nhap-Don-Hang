@@ -479,11 +479,11 @@
 
         <div class="group-title">Thuần Việt Foody</div>
         <div class="group-note">KM: 1 thùng tặng 3 gói</div>
-        <div class="prod-head"><span></span><span>Bán</span><span>Tặng</span></div>
+        <div class="prod-head"><span></span><span>Thùng</span><span>Lẻ</span><span>Tặng</span></div>
         <div id="prodGroupMi"></div>
 
         <div class="group-title">Gia vị &amp; sản phẩm khác</div>
-        <div class="prod-head"><span></span><span>Bán</span><span>Tặng</span></div>
+        <div class="prod-head"><span></span><span>Thùng</span><span>Lẻ</span><span>Tặng</span></div>
         <div id="prodGroupGiaVi"></div>
 
         <div class="field" style="margin-top:14px;">
@@ -654,19 +654,19 @@
 
   // ---------- SẢN PHẨM ----------
   const PRODUCTS = [
-    {id:'pho_bo',          name:'Phở Bò',                          shortLabel:'Phở bò',                  price:6667,  cat:'mi'},
-    {id:'pho_ga',          name:'Phở gà',                          shortLabel:'Phở gà',                  price:6667,  cat:'mi'},
-    {id:'hu_tieu_nv',      name:'Hủ Tiếu Nam Vang',                shortLabel:'Hủ tiếu Nam Vang',        price:7667,  cat:'mi'},
-    {id:'hu_tieu_sh',      name:'Hủ Tiếu Sườn Heo',                shortLabel:'Hủ tiếu sườn heo',        price:7667,  cat:'mi'},
-    {id:'pho_chay',        name:'Phở chay',                        shortLabel:'Phở chay',                price:7667,  cat:'mi'},
-    {id:'hu_tieu_chay',    name:'Hủ tiếu chay',                    shortLabel:'Hủ tiếu chay',            price:7667,  cat:'mi'},
-    {id:'bun_bo_hue',      name:'Bún bò Huế',                      shortLabel:'Bún bò Huế',              price:7667,  cat:'mi'},
-    {id:'bun_gio_heo',     name:'Bún Giò Heo',                     shortLabel:'Bún Giò Heo',             price:7667,  cat:'mi'},
-    {id:'bot_ngot',        name:'Bột ngọt Thuần Việt',             shortLabel:'Bột ngọt',                price:23000, cat:'gia_vi'},
-    {id:'tieu_den',        name:'Tiêu đen xay',                    shortLabel:'Tiêu đen xay',            price:14000, cat:'gia_vi'},
-    {id:'muoi_cham',       name:'Muối chấm tôm chua cay',          shortLabel:'Muối chấm tôm chua cay',  price:10000, cat:'gia_vi'},
-    {id:'bot_canh_tom',    name:'Bột canh tôm',                    shortLabel:'Bột canh tôm',            price:4600,  cat:'gia_vi'},
-    {id:'bot_canh_nam',    name:'Bột canh nấm',                    shortLabel:'Bột canh nấm',            price:4600,  cat:'gia_vi'},
+    {id:'pho_bo',          name:'Phở Bò',                          shortLabel:'Phở bò',                  price:6667,  cat:'mi',     caseSize:30},
+    {id:'pho_ga',          name:'Phở gà',                          shortLabel:'Phở gà',                  price:6667,  cat:'mi',     caseSize:30},
+    {id:'hu_tieu_nv',      name:'Hủ Tiếu Nam Vang',                shortLabel:'Hủ tiếu Nam Vang',        price:7667,  cat:'mi',     caseSize:30},
+    {id:'hu_tieu_sh',      name:'Hủ Tiếu Sườn Heo',                shortLabel:'Hủ tiếu sườn heo',        price:7667,  cat:'mi',     caseSize:30},
+    {id:'pho_chay',        name:'Phở chay',                        shortLabel:'Phở chay',                price:7667,  cat:'mi',     caseSize:30},
+    {id:'hu_tieu_chay',    name:'Hủ tiếu chay',                    shortLabel:'Hủ tiếu chay',            price:7667,  cat:'mi',     caseSize:30},
+    {id:'bun_bo_hue',      name:'Bún bò Huế',                      shortLabel:'Bún bò Huế',              price:7667,  cat:'mi',     caseSize:30},
+    {id:'bun_gio_heo',     name:'Bún Giò Heo',                     shortLabel:'Bún Giò Heo',             price:7667,  cat:'mi',     caseSize:30},
+    {id:'bot_ngot',        name:'Bột ngọt Thuần Việt',             shortLabel:'Bột ngọt',                price:23000, cat:'gia_vi', caseSize:30},
+    {id:'tieu_den',        name:'Tiêu đen xay',                    shortLabel:'Tiêu đen xay',            price:14000, cat:'gia_vi', caseSize:50},
+    {id:'muoi_cham',       name:'Muối chấm tôm chua cay',          shortLabel:'Muối chấm tôm chua cay',  price:10000, cat:'gia_vi', caseSize:50},
+    {id:'bot_canh_tom',    name:'Bột canh tôm',                    shortLabel:'Bột canh tôm',            price:4600,  cat:'gia_vi', caseSize:50},
+    {id:'bot_canh_nam',    name:'Bột canh nấm',                    shortLabel:'Bột canh nấm',            price:4600,  cat:'gia_vi', caseSize:50},
   ];
   const DISTRICTS = [
     'Huyện Càng Long',
@@ -772,6 +772,32 @@
     const ov = state.settings && state.settings.prices && state.settings.prices[pid];
     if(ov!==undefined && ov!==null && ov!=='') return Number(ov);
     return product ? product.price : 0;
+  }
+  function caseSizeOf(pid){
+    const product = PRODUCTS.find(p=>p.id===pid);
+    return product && Number(product.caseSize) ? Number(product.caseSize) : 1;
+  }
+  function itemSoldQty(item){
+    return Number(item && item.ban || 0);
+  }
+  function formatSoldQuantity(item){
+    if(!item) return '';
+    const hasCaseBreakdown = item.thung!==undefined || item.le!==undefined;
+    const thung = Number(item.thung || 0);
+    const le = Number(item.le || 0);
+    if(hasCaseBreakdown){
+      const parts = [];
+      if(thung>0) parts.push(thung+' thùng');
+      if(le>0) parts.push(le+' gói lẻ');
+      return parts.length ? parts.join(' + ') : '0 gói';
+    }
+    return itemSoldQty(item)+' gói';
+  }
+  function formatItemQuantity(item){
+    if(!item || (!itemSoldQty(item) && !Number(item.tang||0))) return '';
+    let text = formatSoldQuantity(item);
+    if(Number(item.tang||0)>0) text += ' (tặng '+Number(item.tang)+' gói)';
+    return text;
   }
   function showToast(msg){
     const t = document.getElementById('toast');
@@ -1242,7 +1268,7 @@
     let s=0;
     Object.keys(o.items||{}).forEach(pid=>{
       const it = o.items[pid];
-      s += (it.ban||0) * priceOf(pid);
+      s += itemSoldQty(it) * priceOf(pid);
     });
     return s;
   }
@@ -1252,7 +1278,7 @@
       const p = PRODUCTS.find(p=>p.id===pid);
       if(p && p.cat==='gia_vi'){
         const it = o.items[pid];
-        s += (it.ban||0) * priceOf(pid);
+        s += itemSoldQty(it) * priceOf(pid);
       }
     });
     return s;
@@ -1268,8 +1294,9 @@
       const row = document.createElement('div');
       row.className = 'prod-row';
       row.innerHTML =
-        '<div class="pname">'+p.name+'<span class="pprice">'+fmtVND(priceOf(p.id))+'đ/gói</span></div>'+
-        '<input type="number" min="0" inputmode="numeric" id="ban_'+p.id+'" placeholder="0">'+
+        '<div class="pname">'+p.name+'<span class="pprice">'+fmtVND(priceOf(p.id))+'đ/gói · '+p.caseSize+' gói/thùng</span></div>'+
+        '<input type="number" min="0" inputmode="numeric" id="thung_'+p.id+'" placeholder="0">'+
+        '<input type="number" min="0" inputmode="numeric" id="le_'+p.id+'" placeholder="0">'+
         '<input type="number" min="0" inputmode="numeric" id="tang_'+p.id+'" placeholder="0">';
       (p.cat==='mi'?miWrap:gvWrap).appendChild(row);
     });
@@ -1294,9 +1321,11 @@
     state.pendingLocation=null;
     setLocationStatus('','');
     PRODUCTS.forEach(p=>{
-      const sold=document.getElementById('ban_'+p.id);
+      const cases=document.getElementById('thung_'+p.id);
+      const loose=document.getElementById('le_'+p.id);
       const gifted=document.getElementById('tang_'+p.id);
-      if(sold) sold.value='';
+      if(cases) cases.value='';
+      if(loose) loose.value='';
       if(gifted) gifted.value='';
     });
   }
@@ -1313,9 +1342,15 @@
     }
     const items = {};
     PRODUCTS.forEach(p=>{
-      const ban = Number(document.getElementById('ban_'+p.id).value)||0;
+      const thung = Number(document.getElementById('thung_'+p.id).value)||0;
+      const le = Number(document.getElementById('le_'+p.id).value)||0;
       const tang = Number(document.getElementById('tang_'+p.id).value)||0;
+      const ban = thung * caseSizeOf(p.id) + le;
       if(ban>0 || tang>0) items[p.id] = {ban, tang};
+      if(items[p.id]){
+        items[p.id].thung = thung;
+        items[p.id].le = le;
+      }
     });
     const order = {
       id: makeId(),
@@ -1379,9 +1414,8 @@
       const itemsTxt = Object.keys(o.items||{}).map(pid=>{
         const p = PRODUCTS.find(p=>p.id===pid);
         const it = o.items[pid];
-        let s = esc(p ? p.name : pid)+': <b>'+Number(it.ban||0)+'</b> gói';
-        if(it.tang>0) s += ' (tặng '+it.tang+')';
-        return s;
+        return esc(p ? p.name : pid)+': <b>'+esc(formatSoldQuantity(it))+'</b>'+
+          (Number(it.tang||0)>0 ? ' (tặng '+Number(it.tang)+' gói)' : '');
       }).join('<br>');
       return '<div class="order-card">'+
         '<div class="row1">'+
@@ -1515,10 +1549,7 @@
 
   // ---------- MẪU TIN NHẮN ZALO CHO TỪNG ĐƠN ----------
   function itemLine(it){
-    if(!it || (!it.ban && !it.tang)) return '';
-    let s = (it.ban||0)+' gói';
-    if(it.tang>0) s += ' tặng '+it.tang+' gói';
-    return s;
+    return formatItemQuantity(it);
   }
   function buildOrderMessage(o){
     const lines = [];
@@ -1601,9 +1632,8 @@
     return Object.keys(order.items||{}).map(pid=>{
       const product=PRODUCTS.find(p=>p.id===pid);
       const quantities=order.items[pid] || {};
-      let text=esc(product ? product.name : pid)+': <b>'+Number(quantities.ban||0)+'</b> gói';
-      if(Number(quantities.tang||0)>0) text+=' (tặng '+Number(quantities.tang)+' gói)';
-      return text;
+      return esc(product ? product.name : pid)+': <b>'+esc(formatSoldQuantity(quantities))+'</b>'+
+        (Number(quantities.tang||0)>0 ? ' (tặng '+Number(quantities.tang)+' gói)' : '');
     }).join('<br>');
   }
   function renderHistory(){
