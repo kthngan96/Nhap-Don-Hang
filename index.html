@@ -1555,16 +1555,51 @@
   function buildOrderMessage(o){
     const lines = [];
     lines.push('Đơn '+o.stt);
+    if(o.ghiChu) lines.push('Ghi chú: '+o.ghiChu);
     lines.push('KH: '+o.kh);
     lines.push('Địa chỉ: '+(o.diaChi||''));
     lines.push('Huyện: '+(o.district||'Chưa xác định'));
-    if(o.location) lines.push('Bản đồ: '+buildMapUrl(o.location));
     lines.push('SĐT: '+(o.sdt||''));
     PRODUCTS.forEach(p=>{
       lines.push('+ '+p.shortLabel+': '+itemLine(o.items[p.id]));
     });
-    if(o.ghiChu) lines.push('Ghi chú: '+o.ghiChu);
+    if(o.location) lines.push('Vị trí: '+buildMapUrl(o.location));
     return lines.join('\n');
+  }
+  function buildOrderMessageHtml(o){
+    const lines = [];
+    lines.push(esc('Đơn '+o.stt));
+    if(o.ghiChu){
+      lines.push('<strong style="color:#B3432B;">Ghi chú: '+esc(o.ghiChu)+'</strong>');
+    }
+    lines.push(esc('KH: '+o.kh));
+    lines.push(esc('Địa chỉ: '+(o.diaChi||'')));
+    lines.push(esc('Huyện: '+(o.district||'Chưa xác định')));
+    lines.push(esc('SĐT: '+(o.sdt||'')));
+    PRODUCTS.forEach(p=>{
+      lines.push(esc('+ '+p.shortLabel+': '+itemLine(o.items[p.id])));
+    });
+    if(o.location){
+      lines.push(esc('Vị trí: '+buildMapUrl(o.location)));
+    }
+    return lines.join('<br>');
+  }
+  async function copyRichText(plainText, htmlText, label){
+    if(navigator.clipboard && window.ClipboardItem){
+      try{
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([htmlText], {type:'text/html'}),
+            'text/plain': new Blob([plainText], {type:'text/plain'})
+          })
+        ]);
+        showToast(label || 'Đã sao chép');
+        return true;
+      }catch(error){
+        console.warn('Rich clipboard copy failed; falling back to plain text.', error);
+      }
+    }
+    return false;
   }
   async function shareOrderToZalo(order){
     const text = buildOrderMessage(order);
@@ -1578,13 +1613,19 @@
       }
     }
     await copyText(text, order.location
-      ? 'Không mở được Zalo, đã sao chép đơn kèm bản đồ'
+      ? 'Không mở được Zalo, đã sao chép đơn kèm vị trí'
       : 'Không mở được Zalo, đã sao chép đơn'
     );
   }
   function copyOrderMessage(id){
     const o = state.orders.find(x=>x.id===id);
-    if(o) copyText(buildOrderMessage(o), 'Đã sao chép mẫu đơn '+o.stt);
+    if(!o) return;
+    const plainText = buildOrderMessage(o);
+    const htmlText = buildOrderMessageHtml(o);
+    copyRichText(plainText, htmlText, 'Đã sao chép mẫu đơn '+o.stt)
+      .then(copied=>{
+        if(!copied) copyText(plainText, 'Đã sao chép mẫu đơn '+o.stt);
+      });
   }
   function shareOrderMessage(id){
     const o = state.orders.find(x=>x.id===id);
