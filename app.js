@@ -3,19 +3,19 @@
 
   // ---------- SẢN PHẨM ----------
   const PRODUCTS = [
-    {id:'pho_bo',          name:'Phở Bò',                          shortLabel:'Phở bò',                  price:6667,  cat:'mi',     caseSize:30},
-    {id:'pho_ga',          name:'Phở gà',                          shortLabel:'Phở gà',                  price:6667,  cat:'mi',     caseSize:30},
+    {id:'pho_bo',          name:'Phở Bò',                          shortLabel:'Phở Bò',                  price:6667,  cat:'mi',     caseSize:30},
+    {id:'pho_ga',          name:'Phở Gà',                          shortLabel:'Phở Gà',                  price:6667,  cat:'mi',     caseSize:30},
     {id:'hu_tieu_nv',      name:'Hủ Tiếu Nam Vang',                shortLabel:'Hủ tiếu Nam Vang',        price:7667,  cat:'mi',     caseSize:30},
     {id:'hu_tieu_sh',      name:'Hủ Tiếu Sườn Heo',                shortLabel:'Hủ tiếu sườn heo',        price:7667,  cat:'mi',     caseSize:30},
-    {id:'pho_chay',        name:'Phở chay',                        shortLabel:'Phở chay',                price:7667,  cat:'mi',     caseSize:30},
-    {id:'hu_tieu_chay',    name:'Hủ tiếu chay',                    shortLabel:'Hủ tiếu chay',            price:7667,  cat:'mi',     caseSize:30},
-    {id:'bun_bo_hue',      name:'Bún bò Huế',                      shortLabel:'Bún bò Huế',              price:7667,  cat:'mi',     caseSize:30},
+    {id:'pho_chay',        name:'Phở Chay',                        shortLabel:'Phở Chay',                price:7667,  cat:'mi',     caseSize:30},
+    {id:'hu_tieu_chay',    name:'Hủ Tiếu Chay',                    shortLabel:'Hủ Tiếu Chay',            price:7667,  cat:'mi',     caseSize:30},
+    {id:'bun_bo_hue',      name:'Bún Bò Huế',                      shortLabel:'Bún Bò Huế',              price:7667,  cat:'mi',     caseSize:30},
     {id:'bun_gio_heo',     name:'Bún Giò Heo',                     shortLabel:'Bún Giò Heo',             price:7667,  cat:'mi',     caseSize:30},
-    {id:'bot_ngot',        name:'Bột ngọt Thuần Việt',             shortLabel:'Bột ngọt',                price:23000, cat:'gia_vi', caseSize:30},
+    {id:'bot_ngot',        name:'Bột Ngọt Thuần Việt',             shortLabel:'Bột Ngọt',                price:23000, cat:'gia_vi', caseSize:30},
     {id:'tieu_den',        name:'Tiêu đen xay',                    shortLabel:'Tiêu đen xay',            price:14000, cat:'gia_vi', caseSize:50},
-    {id:'muoi_cham',       name:'Muối chấm tôm chua cay',          shortLabel:'Muối chấm tôm chua cay',  price:10000, cat:'gia_vi', caseSize:50},
-    {id:'bot_canh_tom',    name:'Bột canh tôm',                    shortLabel:'Bột canh tôm',            price:4600,  cat:'gia_vi', caseSize:50},
-    {id:'bot_canh_nam',    name:'Bột canh nấm',                    shortLabel:'Bột canh nấm',            price:4600,  cat:'gia_vi', caseSize:50},
+    {id:'muoi_cham',       name:'Muối Chấm Tôm Chua Cay',          shortLabel:'Muối Chấm Tôm Chua Cay',  price:10000, cat:'gia_vi', caseSize:50},
+    {id:'bot_canh_tom',    name:'Bột Canh Tôm',                    shortLabel:'Bột Canh Tôm',            price:4600,  cat:'gia_vi', caseSize:50},
+    {id:'bot_canh_nam',    name:'Bột Canh Nấm',                    shortLabel:'Bột Canh Nấm',            price:4600,  cat:'gia_vi', caseSize:50},
   ];
   const DISTRICTS = [
     'Huyện Càng Long',
@@ -88,6 +88,8 @@
     session: null,
     user: null,
     pendingLocation: null,
+    editingOrderId: null,
+    orderDraftBeforeEdit: null,
     avatarUrl: '',
     avatarBusy: false,
     history:createHistoryState()
@@ -228,13 +230,17 @@
   }
   async function runButtonAction(button, busyLabel, action){
     if(button.disabled) return;
-    const oldText = button.textContent;
+    const label = button.querySelector('[data-button-label]');
+    const oldText = label ? label.textContent : button.textContent;
     button.disabled = true;
-    button.textContent = busyLabel;
+    if(label) label.textContent = busyLabel;
+    else button.textContent = busyLabel;
     try{ return await action(); }
     finally{
       button.disabled = false;
-      button.textContent = oldText;
+      if(label){
+        if(label.textContent===busyLabel) label.textContent = oldText;
+      }else button.textContent = oldText;
       syncOnlineState();
     }
   }
@@ -319,8 +325,11 @@
     state.avatarBusy = false;
     state.orders = [];
     state.pendingLocation = null;
+    state.editingOrderId = null;
+    state.orderDraftBeforeEdit = null;
     state.history = createHistoryState();
     resetOrderForm();
+    syncOrderFormMode();
     renderToday();
     renderHistory();
   }
@@ -874,34 +883,110 @@
     );
   }
 
-  function resetOrderForm(){
-    document.getElementById('f_kh').value='';
-    document.getElementById('f_diachi').value='';
-    document.getElementById('f_district').value='';
-    document.getElementById('f_sdt').value='';
-    document.getElementById('f_isnew').checked=false;
-    document.getElementById('f_ghichu').value='';
-    state.pendingLocation=null;
-    setLocationStatus('','');
-    PRODUCTS.forEach(p=>{
-      const cases=document.getElementById('thung_'+p.id);
-      const loose=document.getElementById('le_'+p.id);
-      const gifted=document.getElementById('tang_'+p.id);
-      if(cases) cases.value='';
-      if(loose) loose.value='';
-      if(gifted) gifted.value='';
+  function copyLocation(location){
+    if(!location) return null;
+    return {
+      latitude:Number(location.latitude),
+      longitude:Number(location.longitude),
+      accuracy:location.accuracy===null || location.accuracy===undefined ? null : Number(location.accuracy),
+      capturedAt:location.capturedAt || null
+    };
+  }
+  function captureOrderFormDraft(){
+    const quantities={};
+    PRODUCTS.forEach(product=>{
+      quantities[product.id]={
+        thung:document.getElementById('thung_'+product.id)?.value || '',
+        le:document.getElementById('le_'+product.id)?.value || '',
+        tang:document.getElementById('tang_'+product.id)?.value || ''
+      };
+    });
+    return {
+      kh:document.getElementById('f_kh').value,
+      diaChi:document.getElementById('f_diachi').value,
+      district:document.getElementById('f_district').value,
+      sdt:document.getElementById('f_sdt').value,
+      isNew:document.getElementById('f_isnew').checked,
+      ghiChu:document.getElementById('f_ghichu').value,
+      quantities,
+      location:copyLocation(state.pendingLocation)
+    };
+  }
+  function applyOrderFormDraft(draft){
+    const value=draft || {};
+    document.getElementById('f_kh').value=value.kh || '';
+    document.getElementById('f_diachi').value=value.diaChi || '';
+    document.getElementById('f_district').value=value.district || '';
+    document.getElementById('f_sdt').value=value.sdt || '';
+    document.getElementById('f_isnew').checked=Boolean(value.isNew);
+    document.getElementById('f_ghichu').value=value.ghiChu || '';
+    state.pendingLocation=copyLocation(value.location);
+    setLocationStatus(
+      state.pendingLocation ? 'success' : '',
+      state.pendingLocation ? 'Đang dùng vị trí đã lưu.' : '',
+      state.pendingLocation
+    );
+    PRODUCTS.forEach(product=>{
+      const quantities=value.quantities && value.quantities[product.id] || {};
+      const cases=document.getElementById('thung_'+product.id);
+      const loose=document.getElementById('le_'+product.id);
+      const gifted=document.getElementById('tang_'+product.id);
+      if(cases) cases.value=quantities.thung ?? '';
+      if(loose) loose.value=quantities.le ?? '';
+      if(gifted) gifted.value=quantities.tang ?? '';
     });
   }
-
-  async function addOrder(){
-    if(!requireOnline()) return;
+  function orderToFormDraft(order){
+    const quantities={};
+    PRODUCTS.forEach(product=>{
+      const item=order.items && order.items[product.id] || {};
+      const sold=itemSoldQty(item);
+      const hasBreakdown=item.thung!==undefined || item.le!==undefined;
+      quantities[product.id]={
+        thung:hasBreakdown ? Number(item.thung||0) : Math.floor(sold/caseSizeOf(product.id)),
+        le:hasBreakdown ? Number(item.le||0) : sold%caseSizeOf(product.id),
+        tang:Number(item.tang||0)
+      };
+    });
+    return {
+      kh:order.kh,
+      diaChi:order.diaChi,
+      district:order.district,
+      sdt:order.sdt,
+      isNew:order.isNew,
+      ghiChu:order.ghiChu,
+      quantities,
+      location:copyLocation(order.location)
+    };
+  }
+  function syncOrderFormMode(){
+    const editing=Boolean(state.editingOrderId);
+    const order=editing ? state.orders.find(item=>item.id===state.editingOrderId) : null;
+    document.getElementById('tab-order').classList.toggle('is-editing',editing);
+    document.getElementById('orderFormTitle').textContent=editing
+      ? 'Sửa đơn'+(order ? ' #'+order.stt : '')
+      : 'Nhập đơn';
+    document.querySelector('#btnAddOrder [data-button-label]').textContent=editing ? 'Lưu thay đổi' : 'Thêm đơn';
+    document.getElementById('btnAddOrderIcon').hidden=editing;
+    document.getElementById('btnEditOrderIcon').hidden=!editing;
+    document.getElementById('btnCancelOrderEdit').hidden=!editing;
+  }
+  function resetOrderForm(){
+    applyOrderFormDraft(null);
+    syncOrderFormMode();
+  }
+  function readOrderForm(){
     const kh = document.getElementById('f_kh').value.trim();
-    if(!kh){ showToast('Vui lòng nhập tên khách hàng'); document.getElementById('f_kh').focus(); return; }
+    if(!kh){
+      showToast('Vui lòng nhập tên khách hàng');
+      document.getElementById('f_kh').focus();
+      return null;
+    }
     const district = document.getElementById('f_district').value;
     if(!DISTRICTS.includes(district)){
       showToast('Vui lòng chọn huyện');
       document.getElementById('f_district').focus();
-      return;
+      return null;
     }
     const items = {};
     PRODUCTS.forEach(p=>{
@@ -915,9 +1000,7 @@
         items[p.id].le = le;
       }
     });
-    const order = {
-      id: makeId(),
-      stt: state.orders.length+1,
+    return {
       kh,
       diaChi: document.getElementById('f_diachi').value.trim(),
       district,
@@ -925,9 +1008,60 @@
       isNew: document.getElementById('f_isnew').checked,
       ghiChu: document.getElementById('f_ghichu').value.trim(),
       items,
-      location:state.pendingLocation,
-      createdAt: new Date().toISOString()
+      location:copyLocation(state.pendingLocation)
     };
+  }
+  function scrollOrderFormIntoView(){
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    requestAnimationFrame(()=>{
+      window.scrollTo({top:0,behavior:reduced ? 'auto' : 'smooth'});
+    });
+  }
+  function beginEditOrder(id){
+    const order=state.orders.find(item=>item.id===id);
+    if(!order){
+      showToast('Không tìm thấy đơn hàng cần sửa.');
+      return;
+    }
+    if(state.editingOrderId===id){
+      switchTab('order');
+      scrollOrderFormIntoView();
+      return;
+    }
+    if(state.editingOrderId && !confirm('Bỏ thay đổi đang sửa để chuyển sang đơn khác?')) return;
+    if(!state.editingOrderId) state.orderDraftBeforeEdit=captureOrderFormDraft();
+    state.editingOrderId=id;
+    applyOrderFormDraft(orderToFormDraft(order));
+    syncOrderFormMode();
+    switchTab('order');
+    scrollOrderFormIntoView();
+  }
+  function finishOrderEdit(switchToToday){
+    const draft=state.orderDraftBeforeEdit;
+    state.editingOrderId=null;
+    state.orderDraftBeforeEdit=null;
+    applyOrderFormDraft(draft);
+    syncOrderFormMode();
+    if(switchToToday!==false){
+      switchTab('today');
+      scrollOrderFormIntoView();
+    }
+  }
+  function cancelOrderEdit(){
+    if(!state.editingOrderId) return;
+    finishOrderEdit(true);
+    showToast('Đã hủy sửa đơn');
+  }
+  async function addOrder(){
+    if(!requireOnline()) return;
+    const values=readOrderForm();
+    if(!values) return;
+    const order = Object.assign({},values,{
+      id: makeId(),
+      stt: state.orders.length+1,
+      workDate: state.date,
+      createdAt: new Date().toISOString()
+    });
     const button = document.getElementById('btnAddOrder');
     await runButtonAction(button,'Đang lưu…',async ()=>{
       const {error} = await client.from('orders').insert(orderToRow(order,state.date));
@@ -939,6 +1073,51 @@
       switchTab('today');
       showToast('Đã thêm đơn #'+order.stt);
     });
+  }
+  async function updateOrder(){
+    if(!requireOnline()) return;
+    const index=state.orders.findIndex(item=>item.id===state.editingOrderId);
+    if(index<0){
+      showToast('Đơn hàng không còn tồn tại.');
+      finishOrderEdit(true);
+      return;
+    }
+    const values=readOrderForm();
+    if(!values) return;
+    const current=state.orders[index];
+    const updated=Object.assign({},current,values,{
+      id:current.id,
+      stt:current.stt,
+      workDate:current.workDate,
+      createdAt:current.createdAt
+    });
+    const row=orderToRow(updated,current.workDate || state.date);
+    delete row.user_id;
+    delete row.id;
+    delete row.work_date;
+    delete row.created_at;
+    const button=document.getElementById('btnAddOrder');
+    await runButtonAction(button,'Đang cập nhật…',async ()=>{
+      const {data,error}=await client.from('orders').update(row)
+        .eq('user_id',state.user.id).eq('id',current.id)
+        .select('id').maybeSingle();
+      if(error){
+        showToast(dbError(error,'Không thể cập nhật đơn hàng.').message);
+        return;
+      }
+      if(!data){
+        showToast('Không tìm thấy đơn hàng để cập nhật.');
+        return;
+      }
+      state.orders[index]=updated;
+      invalidateHistory();
+      const orderNumber=updated.stt;
+      finishOrderEdit(true);
+      showToast('Đã cập nhật đơn #'+orderNumber);
+    });
+  }
+  function submitOrderForm(){
+    return state.editingOrderId ? updateOrder() : addOrder();
   }
 
   async function deleteOrder(id){
@@ -953,6 +1132,7 @@
       if(error){ showToast(dbError(error,'Không thể xóa đơn hàng.').message); return; }
       state.orders = state.orders.filter(o=>o.id!==id);
       state.orders.forEach((o,idx)=>o.stt=idx+1);
+      if(state.editingOrderId===id) finishOrderEdit(false);
       invalidateHistory();
       renderToday();
     }finally{
@@ -961,6 +1141,13 @@
   }
 
   // ---------- RENDER: TODAY TAB ----------
+  function closeOrderMenus(exceptMenu){
+    document.querySelectorAll('.order-menu').forEach(menu=>{
+      if(menu!==exceptMenu && menu.open) menu.open=false;
+      const summary=menu.querySelector('summary');
+      if(summary) summary.setAttribute('aria-expanded',String(menu.open));
+    });
+  }
   function renderToday(){
     const list = document.getElementById('todayList');
     const revenue = state.orders.reduce((s,o)=>s+orderRevenue(o),0);
@@ -989,8 +1176,11 @@
             '<div class="order-identity"><span class="order-index">'+o.stt+'</span><div><div class="kh">'+esc(o.kh)+'</div>'+
             '<div class="meta">'+orderMetadata(o)+'</div></div></div>'+
             (o.isNew?'<span class="badge-new">Khách mới</span>':'')+
-            '<details class="order-menu"><summary aria-label="Thao tác khác"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></summary>'+
-              '<div class="order-menu-popover"><button data-order-action="delete" data-order-id="'+esc(o.id)+'">Xóa đơn</button></div></details>'+
+            '<details class="order-menu"><summary aria-label="Thao tác khác cho đơn '+o.stt+'" aria-haspopup="menu" aria-expanded="false"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></summary>'+
+              '<div class="order-menu-popover" role="menu">'+
+                '<button role="menuitem" data-order-action="edit" data-order-id="'+esc(o.id)+'">Sửa đơn</button>'+
+                '<button role="menuitem" data-order-action="delete" data-order-id="'+esc(o.id)+'">Xóa đơn</button>'+
+              '</div></details>'+
           '</div>'+
           '<div class="items">'+
             (itemRows?'<div class="order-item-head"><span>Sản phẩm</span><span>Thùng</span><span>Lẻ</span><span>Tặng</span></div>'+itemRows:'<i>Không có sản phẩm</i>')+
@@ -1056,6 +1246,7 @@
       return;
     }
     const addButton=document.getElementById('btnAddOrder');
+    const previousLocation=copyLocation(state.pendingLocation);
     addButton.disabled=true;
     setLocationStatus('loading','Đang xác định vị trí…');
     try{
@@ -1087,8 +1278,8 @@
       setLocationStatus('success','Đã điền địa chỉ từ GPS.',locationData);
     }catch(error){
       console.error(error);
-      state.pendingLocation=null;
-      setLocationStatus('error',geolocationErrorMessage(error));
+      state.pendingLocation=previousLocation;
+      setLocationStatus('error',geolocationErrorMessage(error),previousLocation);
     }finally{
       addButton.disabled=false;
       syncOnlineState();
@@ -1642,8 +1833,8 @@
     mask.setAttribute('height',String(height));
     maskBase.setAttribute('width',String(width));
     maskBase.setAttribute('height',String(height));
-    surfaceFill.setAttribute('width',String(Math.max(0,width-1)));
-    surfaceFill.setAttribute('height',String(Math.max(0,height-1)));
+    surfaceFill.setAttribute('width',String(width));
+    surfaceFill.setAttribute('height',String(height));
   }
   function placeTabbarVisual(button){
     const tabbar=document.querySelector('nav.tabbar');
@@ -1724,18 +1915,26 @@
   }
   let tabPageTransitionId=0;
   function captureTabPageVisual(tab){
-    if(!tab) return {opacity:1,transform:'translate3d(0,0,0)'};
+    if(!tab) return {opacity:1,rect:null};
     const style=getComputedStyle(tab);
+    const opacity=Number.parseFloat(style.opacity);
+    const rect=tab.getBoundingClientRect();
     return {
-      opacity:Number.parseFloat(style.opacity)||1,
-      transform:style.transform==='none' ? 'translate3d(0,0,0)' : style.transform
+      opacity:Number.isFinite(opacity) ? opacity : 1,
+      rect:{top:rect.top,left:rect.left,width:rect.width}
     };
+  }
+  function clearTabPageTransitionStyles(tab){
+    ['position','top','left','right','width','z-index'].forEach(property=>{
+      tab.style.removeProperty(property);
+    });
   }
   function resetTabPageTransitions(){
     const runId=++tabPageTransitionId;
     document.querySelectorAll('.tab').forEach(tab=>{
       tab.getAnimations().forEach(animation=>animation.cancel());
       tab.classList.remove('tab-leaving','tab-entering');
+      clearTabPageTransitionStyles(tab);
     });
     return runId;
   }
@@ -1744,31 +1943,45 @@
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     previousTab.classList.add('tab-leaving');
     nextTab.classList.add('tab-entering');
+    if(previousVisual.rect){
+      previousTab.style.position='fixed';
+      previousTab.style.top=previousVisual.rect.top+'px';
+      previousTab.style.left=previousVisual.rect.left+'px';
+      previousTab.style.right='auto';
+      previousTab.style.width=previousVisual.rect.width+'px';
+      previousTab.style.zIndex='4';
+    }
     const outgoing=previousTab.animate([
-      {opacity:previousVisual.opacity,transform:previousVisual.transform},
-      {opacity:0,transform:'translate3d('+(-direction*12)+'px,0,0)'}
+      {opacity:previousVisual.opacity,transform:'translate3d(0,0,0)',offset:0},
+      {opacity:previousVisual.opacity,transform:'translate3d(0,0,0)',offset:.12},
+      {opacity:0,transform:'translate3d('+(-direction*24)+'px,0,0)'}
     ],{
-      duration:280,
-      easing:'cubic-bezier(.4,0,1,1)',
+      duration:360,
+      easing:'cubic-bezier(.4,0,.6,1)',
       fill:'forwards'
     });
     const incoming=nextTab.animate([
-      {opacity:0,transform:'translate3d('+(direction*18)+'px,0,0)'},
+      {opacity:0,transform:'translate3d('+(direction*26)+'px,0,0)',offset:0},
+      {opacity:0,transform:'translate3d('+(direction*20)+'px,0,0)',offset:.14},
       {opacity:1,transform:'translate3d(0,0,0)'}
     ],{
-      duration:420,
+      duration:520,
+      delay:70,
       easing:'cubic-bezier(.22,.8,.2,1)',
-      fill:'forwards'
+      fill:'both'
     });
     Promise.allSettled([outgoing.finished,incoming.finished]).then(()=>{
       if(runId!==tabPageTransitionId) return;
       previousTab.classList.remove('tab-leaving');
       nextTab.classList.remove('tab-entering');
+      clearTabPageTransitionStyles(previousTab);
+      clearTabPageTransitionStyles(nextTab);
       outgoing.cancel();
       incoming.cancel();
     });
   }
   function switchTab(name){
+    closeOrderMenus();
     const previousButton=document.querySelector('nav.tabbar button.active');
     const nextButton=document.querySelector('nav.tabbar button[data-tab="'+name+'"]');
     if(!nextButton) return;
@@ -1817,6 +2030,7 @@
       renderSelectedDate();
       return;
     }
+    if(state.editingOrderId) finishOrderEdit(false);
     state.date = e.target.value || todayStr();
     e.target.value=state.date;
     renderSelectedDate();
@@ -1835,8 +2049,21 @@
   document.addEventListener('click',event=>{
     const accountArea=event.target.closest('.account-area');
     if(!accountArea) setAccountMenu(false);
+    const orderMenu=event.target.closest('.order-menu');
+    if(orderMenu) closeOrderMenus(orderMenu);
+    else closeOrderMenus();
   });
   document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){
+      const openOrderMenu=document.querySelector('.order-menu[open]');
+      if(openOrderMenu){
+        const summary=openOrderMenu.querySelector('summary');
+        closeOrderMenus();
+        if(summary) summary.focus();
+        event.preventDefault();
+        return;
+      }
+    }
     if(event.key==='Escape' && document.getElementById('btnAccountMenu').getAttribute('aria-expanded')==='true'){
       setAccountMenu(false);
       document.getElementById('btnAccountMenu').focus();
@@ -1857,10 +2084,19 @@
     });
   });
   document.getElementById('btnLocation').addEventListener('click',captureLocation);
+  document.getElementById('todayList').addEventListener('toggle',event=>{
+    const menu=event.target.closest('.order-menu');
+    if(!menu) return;
+    if(menu.open) closeOrderMenus(menu);
+    const summary=menu.querySelector('summary');
+    if(summary) summary.setAttribute('aria-expanded',String(menu.open));
+  },true);
   document.getElementById('todayList').addEventListener('click',event=>{
     const button=event.target.closest('[data-order-action]');
     if(!button) return;
     const id=button.dataset.orderId;
+    closeOrderMenus();
+    if(button.dataset.orderAction==='edit') beginEditOrder(id);
     if(button.dataset.orderAction==='copy') copyOrderMessage(id);
     if(button.dataset.orderAction==='share') shareOrderMessage(id);
     if(button.dataset.orderAction==='delete') deleteOrder(id);
@@ -1887,7 +2123,8 @@
     if(button.dataset.historyAction==='share') shareHistoryOrder(button.dataset.orderId);
     if(button.dataset.historyAction==='retry') reloadHistory();
   });
-  document.getElementById('btnAddOrder').addEventListener('click', addOrder);
+  document.getElementById('btnAddOrder').addEventListener('click',submitOrderForm);
+  document.getElementById('btnCancelOrderEdit').addEventListener('click',cancelOrderEdit);
   document.getElementById('btnFinalize').addEventListener('click', finalizeDay);
   document.getElementById('btnSaveSettings').addEventListener('click', saveSettingsForm);
   document.getElementById('btnRetryOnline').addEventListener('click',async ()=>{

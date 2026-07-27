@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260727.6">
+<link rel="stylesheet" href="styles.css?v=20260727.9">
 </head>
 <body>
 <section class="auth-shell" id="authShell">
@@ -105,7 +105,7 @@
   <main>
     <!-- TAB: NHẬP ĐƠN -->
     <section class="tab active" id="tab-order">
-      <h2 class="screen-title">Nhập đơn</h2>
+      <h2 class="screen-title" id="orderFormTitle">Nhập đơn</h2>
       <div class="card">
         <h2><span class="section-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.5"/><path d="M5 20c.5-4.4 2.8-6.5 7-6.5s6.5 2.1 7 6.5M4 11h4M6 9v4"/></svg></span> Khách hàng</h2>
         <div class="field">
@@ -163,7 +163,14 @@
           <textarea id="f_ghichu" placeholder="Ghi chú khác về đơn hàng..."></textarea>
         </div>
 
-        <div class="order-action-spacer" aria-hidden="true"></div>
+        <div class="order-form-actions">
+          <button class="btn btn-primary" id="btnAddOrder">
+            <svg class="ui-icon" id="btnAddOrderIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+            <svg class="ui-icon" id="btnEditOrderIcon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m13.5 8 3 3"/></svg>
+            <span data-button-label>Thêm đơn</span>
+          </button>
+          <button class="btn btn-outline" id="btnCancelOrderEdit" type="button" hidden>Hủy sửa</button>
+        </div>
       </div>
     </section>
 
@@ -326,22 +333,15 @@
     </section>
   </main>
 
-  <div class="order-fixed-action">
-    <button class="btn btn-primary" id="btnAddOrder">
-      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-      Thêm đơn
-    </button>
-  </div>
-
   <nav class="tabbar" aria-label="Điều hướng chính">
     <svg class="tabbar-surface" aria-hidden="true" focusable="false">
       <defs>
         <mask id="tabbarSurfaceMask" maskUnits="userSpaceOnUse" mask-type="luminance">
           <rect class="tabbar-mask-base" x="0" y="0" fill="#fff"/>
-          <path class="tabbar-notch" fill="#000" d="M-46-1c14 0 17 3 23 11 7 9 12 13 23 13s16-4 23-13c6-8 9-11 23-11v-20h-92Z"/>
+          <path class="tabbar-notch" fill="#000" d="M-38-1c12 0 15 3 20 10 5 7 9 10 18 10s13-3 18-10c5-7 8-10 20-10v-18h-76Z"/>
         </mask>
       </defs>
-      <rect class="tabbar-surface-fill" x=".5" y=".5" rx="17.5" mask="url(#tabbarSurfaceMask)"/>
+      <rect class="tabbar-surface-fill" x="0" y="0" rx="18" mask="url(#tabbarSurfaceMask)"/>
     </svg>
     <span class="tabbar-crown" aria-hidden="true"></span>
     <span class="tabbar-wash" aria-hidden="true"></span>
@@ -375,6 +375,6 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260727.6"></script>
+<script src="app.js?v=20260727.9"></script>
 </body>
 </html>

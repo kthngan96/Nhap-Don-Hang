@@ -247,10 +247,10 @@
     position:absolute;z-index:0;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;
     filter:drop-shadow(0 14px 17px rgba(53,39,31,.12)) drop-shadow(0 4px 6px rgba(53,39,31,.07));
   }
-  .tabbar-surface-fill{fill:#fff;stroke:rgba(230,220,212,.9);stroke-width:1;}
+  .tabbar-surface-fill{fill:#fff;stroke:none;stroke-width:0;}
   .tabbar-notch{transform-box:view-box;transform-origin:0 0;pointer-events:none;}
   .tabbar-crown{
-    position:absolute;z-index:1;top:-22px;left:0;width:28px;height:28px;border-radius:50%;
+    position:absolute;z-index:3;top:-19px;left:0;width:22px;height:22px;border-radius:50%;
     background:#E24A1A;transform:translate3d(0,0,0);pointer-events:none;
   }
   .tabbar-wash{
@@ -397,7 +397,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     .tab,.location-btn,.tabbar-crown,.tabbar-notch,.tabbar-wash,nav.tabbar button .ui-icon,
-    nav.tabbar button > span,.work-context,.order-fixed-action{animation:none!important;transition:none!important;}
+    nav.tabbar button > span,.work-context{animation:none!important;transition:none!important;}
   }
 
   /* 2026 visual refresh — warm utility design system */
@@ -482,20 +482,10 @@
   .btn-primary:active,.btn-gold:active{background:var(--maroon-dark);}
   .btn-outline{color:var(--maroon);border:1px solid #F06C45;background:#fff;}
   .btn-danger-outline{min-height:44px;color:var(--red);border-color:transparent;background:transparent;}
-  .order-action-spacer{height:58px;}
-  .order-fixed-action{
-    position:fixed;
-    left:max(28px,calc(50% - 284px));
-    right:max(28px,calc(50% - 284px));
-    bottom:calc(var(--tabbar-bottom) + var(--tabbar-height) + var(--tabbar-clearance) + env(safe-area-inset-bottom));
-    z-index:29;opacity:0;visibility:hidden;pointer-events:none;
-    transition:opacity .18s ease,visibility 0s linear .18s;
-  }
-  #app[data-active-tab="order"] .order-fixed-action{
-    opacity:1;visibility:visible;pointer-events:auto;
-    transition:opacity .2s ease .16s,visibility 0s linear 0s;
-  }
-  .order-fixed-action .btn{width:100%;}
+  .order-form-actions{display:grid;grid-template-columns:1fr;gap:8px;}
+  #tab-order.is-editing .order-form-actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  #btnAddOrder{position:static;width:100%;margin-top:0;}
+  #btnCancelOrderEdit{width:100%;}
   .summary-strip{gap:8px;margin-bottom:12px;}
   .stat-box{min-width:0;padding:12px 6px 11px;border-color:var(--line);border-radius:11px;box-shadow:none;}
   .stat-box .v{font-family:var(--font-body);font-size:16px;color:var(--maroon);letter-spacing:-.3px;}
@@ -515,8 +505,10 @@
   .order-menu summary{width:44px;height:44px;list-style:none;display:grid;place-items:center;cursor:pointer;color:var(--ink-soft);border-radius:8px;}
   .order-menu summary::-webkit-details-marker{display:none;}
   .order-menu summary .ui-icon{width:20px;height:20px;}
-  .order-menu-popover{position:absolute;right:0;top:45px;z-index:10;width:150px;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(46,34,27,.14);}
+  .order-menu[open] summary{background:#FFF0EA;color:var(--maroon);}
+  .order-menu-popover{position:absolute;right:0;top:45px;z-index:10;width:160px;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(46,34,27,.14);}
   .order-menu-popover button{width:100%;min-height:40px;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:7px;color:var(--ink);font:600 12px/1.3 var(--font-body);cursor:pointer;}
+  .order-menu-popover button:hover,.order-menu-popover button:focus-visible{outline:0;background:#FFF4EF;color:var(--maroon);}
   .order-menu-popover button:last-child{color:var(--red);}
   .order-card .items{margin-top:12px;font-size:11.5px;line-height:1.5;display:grid;grid-template-columns:1fr;}
   .order-item-head,.order-item-row{display:grid;grid-template-columns:minmax(0,1fr) 42px 42px 42px;gap:4px;align-items:center;}
@@ -643,9 +635,6 @@
     .profile-settings{gap:13px}.avatar-settings{width:78px;height:78px}
     .btn-avatar-change,.btn-avatar-remove{padding-inline:9px;font-size:11px}
   }
-  @media (max-width:380px){
-    .order-fixed-action{left:26px;right:26px;}
-  }
   @media (min-width:560px){
     main{padding-inline:20px}.work-context{padding-inline:20px}
     #app[data-active-tab="today"] .work-context,#app[data-active-tab="report"] .work-context,
@@ -653,5 +642,5 @@
     .tab.tab-leaving{left:20px;right:20px;}
   }
   @media (min-width:560px){
-    .tabbar-crown{top:-26px;width:32px;height:32px;}
+    .tabbar-crown{top:-21px;width:24px;height:24px;}
   }
