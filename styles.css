@@ -278,8 +278,8 @@
   }
   nav.tabbar button.visual-active{color:var(--maroon);font-weight:700;}
   nav.tabbar button.visual-active .ui-icon{
-    top:13px;margin-left:-15px;width:30px;height:30px;padding:7px;
-    color:#fff;background:var(--maroon);stroke-width:2.1;
+    top:17px;margin-left:-13px;width:26px;height:26px;padding:6px;
+    color:#fff;background:var(--gold);stroke-width:2.1;
   }
   nav.tabbar button.visual-active > span{
     max-height:15px;opacity:1;transform:translateY(0) scale(1);
