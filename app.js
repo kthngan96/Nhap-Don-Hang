@@ -1737,7 +1737,6 @@
       tab.getAnimations().forEach(animation=>animation.cancel());
       tab.classList.remove('tab-leaving','tab-entering');
     });
-    document.getElementById('btnAddOrder').getAnimations().forEach(animation=>animation.cancel());
     return runId;
   }
   function animateTabPage(previousTab,nextTab,direction,previousVisual,runId){
@@ -1749,7 +1748,7 @@
       {opacity:previousVisual.opacity,transform:previousVisual.transform},
       {opacity:0,transform:'translate3d('+(-direction*12)+'px,0,0)'}
     ],{
-      duration:210,
+      duration:280,
       easing:'cubic-bezier(.4,0,1,1)',
       fill:'forwards'
     });
@@ -1761,36 +1760,12 @@
       easing:'cubic-bezier(.22,.8,.2,1)',
       fill:'forwards'
     });
-    const fixedButton=document.getElementById('btnAddOrder');
-    const fixedAnimations=[];
-    if(previousTab.contains(fixedButton)){
-      const previousMatrix=new DOMMatrix(previousVisual.transform);
-      fixedAnimations.push(fixedButton.animate([
-        {transform:'translate3d('+(-previousMatrix.m41)+'px,0,0)'},
-        {transform:'translate3d('+(direction*12)+'px,0,0)'}
-      ],{
-        duration:210,
-        easing:'cubic-bezier(.4,0,1,1)',
-        fill:'forwards'
-      }));
-    }
-    if(nextTab.contains(fixedButton)){
-      fixedAnimations.push(fixedButton.animate([
-        {transform:'translate3d('+(-direction*18)+'px,0,0)'},
-        {transform:'translate3d(0,0,0)'}
-      ],{
-        duration:420,
-        easing:'cubic-bezier(.22,.8,.2,1)',
-        fill:'forwards'
-      }));
-    }
-    Promise.allSettled([outgoing.finished,incoming.finished,...fixedAnimations.map(animation=>animation.finished)]).then(()=>{
+    Promise.allSettled([outgoing.finished,incoming.finished]).then(()=>{
       if(runId!==tabPageTransitionId) return;
       previousTab.classList.remove('tab-leaving');
       nextTab.classList.remove('tab-entering');
       outgoing.cancel();
       incoming.cancel();
-      fixedAnimations.forEach(animation=>animation.cancel());
     });
   }
   function switchTab(name){

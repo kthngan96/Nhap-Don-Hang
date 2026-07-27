@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260727.5">
+<link rel="stylesheet" href="styles.css?v=20260727.6">
 </head>
 <body>
 <section class="auth-shell" id="authShell">
@@ -54,7 +54,7 @@
   </form>
 </section>
 
-<div id="app" hidden>
+<div id="app" data-active-tab="order" hidden>
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
@@ -163,10 +163,7 @@
           <textarea id="f_ghichu" placeholder="Ghi chú khác về đơn hàng..."></textarea>
         </div>
 
-        <button class="btn btn-primary" id="btnAddOrder">
-          <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-          Thêm đơn
-        </button>
+        <div class="order-action-spacer" aria-hidden="true"></div>
       </div>
     </section>
 
@@ -329,6 +326,13 @@
     </section>
   </main>
 
+  <div class="order-fixed-action">
+    <button class="btn btn-primary" id="btnAddOrder">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+      Thêm đơn
+    </button>
+  </div>
+
   <nav class="tabbar" aria-label="Điều hướng chính">
     <svg class="tabbar-surface" aria-hidden="true" focusable="false">
       <defs>
@@ -371,6 +375,6 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260727.5"></script>
+<script src="app.js?v=20260727.6"></script>
 </body>
 </html>

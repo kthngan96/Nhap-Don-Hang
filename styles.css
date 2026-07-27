@@ -61,14 +61,15 @@
   }
   .vn-clock{margin-top:5px;font:500 11.5px/1.4 var(--font-mono);color:#E8D4A8;}
 
-  main{flex:1;padding:14px 14px 118px;position:relative;}
+  main{flex:1;padding:14px 14px 118px;position:relative;overflow-x:clip;}
   .tab{display:none;}
   .tab.active{display:block;}
   .tab.tab-leaving{
-    display:block;position:absolute;z-index:1;top:0;left:12px;right:12px;
+    display:block;position:absolute;z-index:3;top:0;left:12px;right:12px;
     pointer-events:none;
   }
-  .tab.active{position:relative;z-index:2;}
+  .tab.active{position:relative;z-index:1;}
+  .tab.tab-entering{z-index:2;}
 
   .card{
     background:var(--paper);
@@ -396,7 +397,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     .tab,.location-btn,.tabbar-crown,.tabbar-notch,.tabbar-wash,nav.tabbar button .ui-icon,
-    nav.tabbar button > span{animation:none!important;transition:none!important;}
+    nav.tabbar button > span,.work-context,.order-fixed-action{animation:none!important;transition:none!important;}
   }
 
   /* 2026 visual refresh — warm utility design system */
@@ -425,9 +426,18 @@
   .btn-signout .ui-icon{width:19px;height:19px;}
   .topbar .sub,.topbar .account-email,.topbar .date-row,.topbar .vn-clock{display:none;}
   main{padding:0 12px calc(var(--tabbar-bottom) + var(--tabbar-height) + 38px + env(safe-area-inset-bottom));}
-  .work-context{display:none;margin:0;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);align-items:center;justify-content:space-between;gap:12px;}
+  .work-context{
+    display:flex;max-height:0;margin:0;padding:0 16px;overflow:hidden;opacity:0;visibility:hidden;
+    background:#fff;border-bottom:0 solid var(--line);align-items:center;justify-content:space-between;gap:12px;
+    pointer-events:none;
+    transition:max-height .26s cubic-bezier(.22,.8,.2,1),padding .26s cubic-bezier(.22,.8,.2,1),
+      opacity .18s ease,visibility 0s linear .26s,border-width .26s ease;
+  }
   #app[data-active-tab="today"] .work-context,#app[data-active-tab="report"] .work-context,
-  #app:has(#tab-today.active) .work-context,#app:has(#tab-report.active) .work-context{display:flex;}
+  #app:has(#tab-today.active) .work-context,#app:has(#tab-report.active) .work-context{
+    max-height:84px;padding:12px 16px;opacity:1;visibility:visible;border-bottom-width:1px;
+    pointer-events:auto;transition-delay:0s;
+  }
   .work-context-copy{min-width:0;color:var(--ink-soft);font-size:12px;line-height:1.55;}
   .work-context-copy strong{color:var(--ink);font-weight:600;}
   .date-row{margin:0;flex:0 0 auto;}
@@ -472,11 +482,20 @@
   .btn-primary:active,.btn-gold:active{background:var(--maroon-dark);}
   .btn-outline{color:var(--maroon);border:1px solid #F06C45;background:#fff;}
   .btn-danger-outline{min-height:44px;color:var(--red);border-color:transparent;background:transparent;}
-  #btnAddOrder{
-    position:sticky;
+  .order-action-spacer{height:58px;}
+  .order-fixed-action{
+    position:fixed;
+    left:max(28px,calc(50% - 284px));
+    right:max(28px,calc(50% - 284px));
     bottom:calc(var(--tabbar-bottom) + var(--tabbar-height) + var(--tabbar-clearance) + env(safe-area-inset-bottom));
-    z-index:5;
+    z-index:29;opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .18s ease,visibility 0s linear .18s;
   }
+  #app[data-active-tab="order"] .order-fixed-action{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transition:opacity .2s ease .16s,visibility 0s linear 0s;
+  }
+  .order-fixed-action .btn{width:100%;}
   .summary-strip{gap:8px;margin-bottom:12px;}
   .stat-box{min-width:0;padding:12px 6px 11px;border-color:var(--line);border-radius:11px;box-shadow:none;}
   .stat-box .v{font-family:var(--font-body);font-size:16px;color:var(--maroon);letter-spacing:-.3px;}
@@ -624,8 +643,13 @@
     .profile-settings{gap:13px}.avatar-settings{width:78px;height:78px}
     .btn-avatar-change,.btn-avatar-remove{padding-inline:9px;font-size:11px}
   }
+  @media (max-width:380px){
+    .order-fixed-action{left:26px;right:26px;}
+  }
   @media (min-width:560px){
     main{padding-inline:20px}.work-context{padding-inline:20px}
+    #app[data-active-tab="today"] .work-context,#app[data-active-tab="report"] .work-context,
+    #app:has(#tab-today.active) .work-context,#app:has(#tab-report.active) .work-context{padding-inline:20px;}
     .tab.tab-leaving{left:20px;right:20px;}
   }
   @media (min-width:560px){
