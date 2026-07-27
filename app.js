@@ -1614,11 +1614,33 @@
   }
 
   // ---------- TABS ----------
+  let tabbarMotionTimer=null;
+  function animateTabbar(previousButton,nextButton){
+    const tabbar=document.querySelector('nav.tabbar');
+    const buttons=Array.from(tabbar.querySelectorAll('button[data-tab]'));
+    const previousIndex=buttons.indexOf(previousButton);
+    const nextIndex=buttons.indexOf(nextButton);
+    tabbar.dataset.direction=nextIndex>=previousIndex ? 'forward' : 'backward';
+    tabbar.classList.remove('is-moving');
+    void tabbar.offsetWidth;
+    tabbar.classList.add('is-moving');
+    clearTimeout(tabbarMotionTimer);
+    tabbarMotionTimer=setTimeout(()=>tabbar.classList.remove('is-moving'),620);
+  }
   function switchTab(name){
+    const previousButton=document.querySelector('nav.tabbar button.active');
+    const nextButton=document.querySelector('nav.tabbar button[data-tab="'+name+'"]');
+    if(!nextButton) return;
+    if(previousButton!==nextButton) animateTabbar(previousButton,nextButton);
     document.getElementById('app').dataset.activeTab=name;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.getElementById('tab-'+name).classList.add('active');
-    document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+    document.querySelectorAll('nav.tabbar button').forEach(b=>{
+      const active=b.dataset.tab===name;
+      b.classList.toggle('active',active);
+      if(active) b.setAttribute('aria-current','page');
+      else b.removeAttribute('aria-current');
+    });
     if(name==='today') renderToday();
     if(name==='report') renderReportTab().catch(error=>showToast(error.message));
     if(name==='history'){
