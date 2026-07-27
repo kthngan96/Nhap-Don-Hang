@@ -151,6 +151,17 @@
   .summary-strip{
     display:flex;gap:10px;margin-bottom:14px;
   }
+  .report-overview-controls{
+    margin-bottom:10px;padding:11px 12px 9px;background:var(--paper);
+    border:1px solid var(--line);border-radius:11px;
+  }
+  .report-overview-range{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .report-overview-range .field{min-width:0;margin-bottom:0;}
+  .report-overview-hint{margin:8px 0 0;color:var(--ink-soft);font-size:10.5px;line-height:1.45;}
+  .report-overview-status{min-height:17px;margin-top:3px;color:var(--ink-soft);font-size:10.5px;line-height:1.45;}
+  .report-overview-status.error{color:var(--red);}
+  .report-summary{transition:opacity .15s ease;}
+  .report-summary[aria-busy="true"]{opacity:.52;}
   .stat-box{
     flex:1;background:var(--paper);border:1px solid var(--line);border-radius:10px;
     padding:10px 8px;text-align:center;box-shadow:var(--shadow);
@@ -491,7 +502,7 @@
   .stat-box .v{font-family:var(--font-body);font-size:16px;color:var(--maroon);letter-spacing:-.3px;}
   .stat-box .l{font-size:10px;margin-top:5px;color:var(--ink-soft);}
   .report-summary .stat-box{padding-inline:3px;}
-  .report-summary .stat-box .v{font-size:13px;}
+  .report-summary .stat-box .v{font-size:clamp(11px,3.15vw,13px);white-space:nowrap;}
   .report-summary .stat-box .l{font-size:9px;}
   .order-card{padding:0;margin-bottom:12px;border-radius:12px;box-shadow:var(--shadow);overflow:visible;}
   .order-card-main{padding:13px 13px 0;}
@@ -626,6 +637,8 @@
 
   @media (max-width:380px){
     main{padding-inline:10px}.work-context{padding-inline:12px}.date-control{min-width:138px}
+    .report-overview-controls{padding-inline:10px}.report-overview-range{gap:8px}
+    .report-overview-range .history-date-control{padding-inline:8px;font-size:12.5px}
     .work-context-copy{font-size:10.5px}.prod-head span,.prod-row input{width:46px}.prod-row{gap:4px}
     .order-item-head,.order-item-row{grid-template-columns:minmax(0,1fr) 37px 37px 37px}nav.tabbar button{font-size:9px}
     header.topbar{padding-inline:10px;}

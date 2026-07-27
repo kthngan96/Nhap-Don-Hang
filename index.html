@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260727.11">
+<link rel="stylesheet" href="styles.css?v=20260727.12">
 </head>
 <body>
 <section class="auth-shell" id="authShell">
@@ -187,8 +187,30 @@
 
     <!-- TAB: BÁO CÁO -->
     <section class="tab" id="tab-report">
-      <h2 class="screen-title">Báo cáo <small>Tổng quan trong ngày</small></h2>
-      <div class="summary-strip report-summary">
+      <h2 class="screen-title">Báo cáo <small>Tổng quan tùy chọn</small></h2>
+      <div class="report-overview-controls">
+        <div class="report-overview-range">
+          <div class="field">
+            <label for="reportDateFrom">Từ ngày</label>
+            <div class="history-date-control">
+              <span id="reportDateFromDisplay">--/--/----</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+              <input type="date" id="reportDateFrom" aria-label="Ngày bắt đầu tổng quan">
+            </div>
+          </div>
+          <div class="field">
+            <label for="reportDateTo">Đến ngày</label>
+            <div class="history-date-control">
+              <span id="reportDateToDisplay">--/--/----</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+              <input type="date" id="reportDateTo" aria-label="Ngày kết thúc tổng quan">
+            </div>
+          </div>
+        </div>
+        <p class="report-overview-hint">Phạm vi này chỉ áp dụng cho Tổng quan tùy chọn.</p>
+        <div class="report-overview-status" id="reportOverviewStatus" role="status" aria-live="polite"></div>
+      </div>
+      <div class="summary-strip report-summary" id="reportSummary" aria-busy="false">
         <div class="stat-box"><div class="v" id="reportOrderCount">0</div><div class="l">Đơn hàng</div></div>
         <div class="stat-box"><div class="v" id="reportRevenue">0</div><div class="l">Doanh số</div></div>
         <div class="stat-box"><div class="v" id="reportGiaVi">0</div><div class="l">Gia vị</div></div>
@@ -375,6 +397,6 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260727.11"></script>
+<script src="app.js?v=20260727.12"></script>
 </body>
 </html>

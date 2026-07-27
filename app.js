@@ -81,6 +81,15 @@
       }
     };
   }
+  function createReportOverviewState(){
+    return {
+      initialized:false,
+      dateFrom:'',
+      dateTo:'',
+      loading:false,
+      requestId:0
+    };
+  }
   let state = {
     date: todayStr(),
     settings: Object.assign({}, DEFAULT_SETTINGS),
@@ -92,7 +101,8 @@
     orderDraftBeforeEdit: null,
     avatarUrl: '',
     avatarBusy: false,
-    history:createHistoryState()
+    history:createHistoryState(),
+    reportOverview:createReportOverviewState()
   };
 
   // ---------- HELPERS ----------
@@ -327,6 +337,7 @@
     state.editingOrderId = null;
     state.orderDraftBeforeEdit = null;
     state.history = createHistoryState();
+    state.reportOverview = createReportOverviewState();
     resetOrderForm();
     syncOrderFormMode();
     renderToday();
@@ -1080,6 +1091,7 @@
       if(error){ showToast(dbError(error,'Không thể lưu đơn hàng.').message); return; }
       state.orders.push(order);
       invalidateHistory();
+      refreshReportOverviewForDate(order.workDate);
       resetOrderForm();
       renderToday();
       switchTab('today');
@@ -1123,6 +1135,7 @@
       }
       state.orders[index]=updated;
       invalidateHistory();
+      refreshReportOverviewForDate(updated.workDate);
       const orderNumber=updated.stt;
       finishOrderEdit(true);
       showToast('Đã cập nhật đơn #'+orderNumber);
@@ -1146,6 +1159,7 @@
       state.orders.forEach((o,idx)=>o.stt=idx+1);
       if(state.editingOrderId===id) finishOrderEdit(false);
       invalidateHistory();
+      refreshReportOverviewForDate(state.date);
       renderToday();
     }finally{
       state.deletingIds.delete(id);
@@ -1616,6 +1630,122 @@
     if(order) shareOrderToZalo(order);
   }
 
+  // ---------- REPORT OVERVIEW ----------
+  function initializeReportOverview(){
+    const overview=state.reportOverview;
+    if(overview.initialized) return;
+    overview.dateFrom=state.date;
+    overview.dateTo=state.date;
+    overview.initialized=true;
+  }
+  function syncReportOverviewControls(){
+    initializeReportOverview();
+    const overview=state.reportOverview;
+    document.getElementById('reportDateFrom').value=overview.dateFrom;
+    document.getElementById('reportDateTo').value=overview.dateTo;
+    document.getElementById('reportDateFromDisplay').textContent=overview.dateFrom
+      ? fmtDateVN(overview.dateFrom)
+      : '--/--/----';
+    document.getElementById('reportDateToDisplay').textContent=overview.dateTo
+      ? fmtDateVN(overview.dateTo)
+      : '--/--/----';
+  }
+  function setReportOverviewValues(orderCount,revenue,giaVi){
+    const hasValues=orderCount!==null;
+    document.getElementById('reportOrderCount').textContent=hasValues ? orderCount : '—';
+    document.getElementById('reportRevenue').textContent=hasValues ? fmtVND(revenue)+' đ' : '—';
+    document.getElementById('reportGiaVi').textContent=hasValues ? fmtVND(giaVi)+' đ' : '—';
+    document.getElementById('reportAverage').textContent=hasValues
+      ? fmtVND(orderCount ? revenue/orderCount : 0)+' đ'
+      : '—';
+  }
+  function setReportOverviewStatus(message,isError){
+    const status=document.getElementById('reportOverviewStatus');
+    status.textContent=message;
+    status.classList.toggle('error',Boolean(isError));
+  }
+  async function getOrdersForReportOverview(dateFrom,dateTo,requestId,userId){
+    const pageSize=1000;
+    const rows=[];
+    let offset=0;
+    while(true){
+      const {data,error}=await client.from('orders')
+        .select('id,work_date,items')
+        .eq('user_id',userId)
+        .gte('work_date',dateFrom)
+        .lte('work_date',dateTo)
+        .order('work_date',{ascending:true})
+        .order('id',{ascending:true})
+        .range(offset,offset+pageSize-1);
+      if(requestId!==state.reportOverview.requestId || !state.user || state.user.id!==userId) return null;
+      throwQueryError(error,'Không thể tải Tổng quan tùy chọn.');
+      const page=data||[];
+      rows.push(...page);
+      if(page.length<pageSize) break;
+      offset+=pageSize;
+    }
+    return rows;
+  }
+  async function renderReportOverview(){
+    if(!state.user) return;
+    initializeReportOverview();
+    syncReportOverviewControls();
+    const overview=state.reportOverview;
+    const summary=document.getElementById('reportSummary');
+    const dateFrom=overview.dateFrom;
+    const dateTo=overview.dateTo;
+    const requestId=++overview.requestId;
+
+    if(!dateFrom || !dateTo || dateFrom>dateTo){
+      overview.loading=false;
+      summary.setAttribute('aria-busy','false');
+      setReportOverviewValues(null,0,0);
+      setReportOverviewStatus('Khoảng ngày không hợp lệ: Từ ngày phải trước hoặc bằng Đến ngày.',true);
+      return;
+    }
+    if(!navigator.onLine){
+      overview.loading=false;
+      summary.setAttribute('aria-busy','false');
+      setReportOverviewValues(null,0,0);
+      setReportOverviewStatus('Không thể cập nhật tổng quan khi đang ngoại tuyến.',true);
+      return;
+    }
+
+    overview.loading=true;
+    summary.setAttribute('aria-busy','true');
+    setReportOverviewValues(null,0,0);
+    setReportOverviewStatus('Đang tải tổng quan…',false);
+    try{
+      const rows=await getOrdersForReportOverview(dateFrom,dateTo,requestId,state.user.id);
+      if(!rows || requestId!==overview.requestId) return;
+      const revenue=rows.reduce((sum,order)=>sum+orderRevenue(order),0);
+      const giaVi=rows.reduce((sum,order)=>sum+orderGiaVi(order),0);
+      setReportOverviewValues(rows.length,revenue,giaVi);
+      const rangeLabel=dateFrom===dateTo
+        ? 'ngày '+fmtDateVN(dateFrom)
+        : fmtDateVN(dateFrom)+' – '+fmtDateVN(dateTo);
+      setReportOverviewStatus('Đang hiển thị '+rangeLabel+'.',false);
+    }catch(error){
+      if(requestId!==overview.requestId) return;
+      console.error(error);
+      setReportOverviewValues(null,0,0);
+      setReportOverviewStatus(error.message || 'Không thể tải Tổng quan tùy chọn.',true);
+    }finally{
+      if(requestId===overview.requestId){
+        overview.loading=false;
+        summary.setAttribute('aria-busy','false');
+      }
+    }
+  }
+  function refreshReportOverviewForDate(date){
+    const overview=state.reportOverview;
+    if(!overview.initialized || date<overview.dateFrom || date>overview.dateTo) return;
+    overview.requestId++;
+    if(document.getElementById('tab-report').classList.contains('active')){
+      renderReportOverview();
+    }
+  }
+
   // ---------- FINALIZE / REPORT ----------
   async function finalizeDay(){
     if(!requireOnline()) return;
@@ -1698,13 +1828,9 @@
   }
 
   async function renderReportTab(){
-    if(!state.user || !navigator.onLine) return;
-    const currentRevenue=state.orders.reduce((sum,order)=>sum+orderRevenue(order),0);
-    const currentGiaVi=state.orders.reduce((sum,order)=>sum+orderGiaVi(order),0);
-    document.getElementById('reportOrderCount').textContent=state.orders.length;
-    document.getElementById('reportRevenue').textContent=fmtVND(currentRevenue)+' đ';
-    document.getElementById('reportGiaVi').textContent=fmtVND(currentGiaVi)+' đ';
-    document.getElementById('reportAverage').textContent=fmtVND(state.orders.length?currentRevenue/state.orders.length:0)+' đ';
+    if(!state.user) return;
+    await renderReportOverview();
+    if(!navigator.onLine) return;
     const mKey = monthKey(state.date);
     const [reports,opening] = await Promise.all([
       getMonthReports(mKey,state.date),
@@ -2056,7 +2182,15 @@
       return;
     }
     if(state.editingOrderId) finishOrderEdit(false);
+    const previousDate=state.date;
+    const overviewFollowsWorkDate=state.reportOverview.initialized
+      && state.reportOverview.dateFrom===previousDate
+      && state.reportOverview.dateTo===previousDate;
     state.date = e.target.value || todayStr();
+    if(overviewFollowsWorkDate){
+      state.reportOverview.dateFrom=state.date;
+      state.reportOverview.dateTo=state.date;
+    }
     e.target.value=state.date;
     renderSelectedDate();
     try{
@@ -2125,6 +2259,14 @@
     if(button.dataset.orderAction==='copy') copyOrderMessage(id);
     if(button.dataset.orderAction==='share') shareOrderMessage(id);
     if(button.dataset.orderAction==='delete') deleteOrder(id);
+  });
+  ['reportDateFrom','reportDateTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('change',event=>{
+      if(id==='reportDateFrom') state.reportOverview.dateFrom=event.target.value;
+      else state.reportOverview.dateTo=event.target.value;
+      syncReportOverviewControls();
+      renderReportOverview();
+    });
   });
   document.querySelectorAll('[data-history-mode]').forEach(button=>{
     button.addEventListener('click',()=>{
