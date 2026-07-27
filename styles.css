@@ -61,10 +61,14 @@
   }
   .vn-clock{margin-top:5px;font:500 11.5px/1.4 var(--font-mono);color:#E8D4A8;}
 
-  main{flex:1;padding:14px 14px 118px;}
-  .tab{display:none;animation:fade .15s ease;}
+  main{flex:1;padding:14px 14px 118px;position:relative;}
+  .tab{display:none;}
   .tab.active{display:block;}
-  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+  .tab.tab-leaving{
+    display:block;position:absolute;z-index:1;top:0;left:12px;right:12px;
+    pointer-events:none;
+  }
+  .tab.active{position:relative;z-index:2;}
 
   .card{
     background:var(--paper);
@@ -262,8 +266,10 @@
   }
   nav.tabbar button:focus-visible{outline:3px solid rgba(124,44,40,.22);outline-offset:-3px;}
   nav.tabbar button .ui-icon{
-    position:absolute;top:21px;left:50%;margin-left:-11px;width:22px;height:22px;stroke-width:1.75;
-    transition:color .2s ease,transform .58s cubic-bezier(.65,-.15,.25,1.22),stroke-width .2s ease;
+    position:absolute;top:21px;left:50%;margin-left:-11px;width:22px;height:22px;padding:0;
+    box-sizing:border-box;border-radius:50%;background:transparent;stroke-width:1.75;
+    transition:top .24s ease,width .24s ease,height .24s ease,margin-left .24s ease,padding .24s ease,
+      color .2s ease,background-color .2s ease,transform .58s cubic-bezier(.65,-.15,.25,1.22),stroke-width .2s ease;
   }
   nav.tabbar button > span{
     position:absolute;top:45px;left:2px;right:2px;max-height:0;opacity:0;overflow:hidden;white-space:nowrap;
@@ -271,7 +277,10 @@
     transition:opacity .18s ease .02s,max-height .18s ease,transform .25s ease;
   }
   nav.tabbar button.visual-active{color:var(--maroon);font-weight:700;}
-  nav.tabbar button.visual-active .ui-icon{stroke-width:2.2;}
+  nav.tabbar button.visual-active .ui-icon{
+    top:13px;margin-left:-15px;width:30px;height:30px;padding:7px;
+    color:#fff;background:var(--maroon);stroke-width:2.1;
+  }
   nav.tabbar button.visual-active > span{
     max-height:15px;opacity:1;transform:translateY(0) scale(1);
     transition-delay:.08s,.04s,.08s;
@@ -377,6 +386,7 @@
   .migration-actions .btn{flex:1;padding-inline:10px;}
 
   @media (max-width:380px){
+    .tab.tab-leaving{left:10px;right:10px;}
     .auth-card{padding:22px 17px;}
     .account-row{align-items:flex-start;flex-direction:column;gap:7px;}
     .btn-signout{align-self:flex-start;}
@@ -614,7 +624,10 @@
     .profile-settings{gap:13px}.avatar-settings{width:78px;height:78px}
     .btn-avatar-change,.btn-avatar-remove{padding-inline:9px;font-size:11px}
   }
-  @media (min-width:560px){main{padding-inline:20px}.work-context{padding-inline:20px}}
+  @media (min-width:560px){
+    main{padding-inline:20px}.work-context{padding-inline:20px}
+    .tab.tab-leaving{left:20px;right:20px;}
+  }
   @media (min-width:560px){
     .tabbar-crown{top:-32px;width:40px;height:40px;}
   }

@@ -1722,14 +1722,71 @@
     tabbar.querySelector('.tabbar-wash').getAnimations().forEach(animation=>animation.cancel());
     placeTabbarVisual(active);
   }
+  let tabPageTransitionId=0;
+  function captureTabPageVisual(tab){
+    if(!tab) return {opacity:1,transform:'translate3d(0,0,0)'};
+    const style=getComputedStyle(tab);
+    return {
+      opacity:Number.parseFloat(style.opacity)||1,
+      transform:style.transform==='none' ? 'translate3d(0,0,0)' : style.transform
+    };
+  }
+  function resetTabPageTransitions(){
+    const runId=++tabPageTransitionId;
+    document.querySelectorAll('.tab').forEach(tab=>{
+      tab.getAnimations().forEach(animation=>animation.cancel());
+      tab.classList.remove('tab-leaving','tab-entering');
+    });
+    return runId;
+  }
+  function animateTabPage(previousTab,nextTab,direction,previousVisual,runId){
+    if(!previousTab || !nextTab || previousTab===nextTab) return;
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    previousTab.classList.add('tab-leaving');
+    nextTab.classList.add('tab-entering');
+    const outgoing=previousTab.animate([
+      {opacity:previousVisual.opacity,transform:previousVisual.transform},
+      {opacity:0,transform:'translate3d('+(-direction*12)+'px,0,0)'}
+    ],{
+      duration:210,
+      easing:'cubic-bezier(.4,0,1,1)',
+      fill:'forwards'
+    });
+    const incoming=nextTab.animate([
+      {opacity:0,transform:'translate3d('+(direction*18)+'px,0,0)'},
+      {opacity:1,transform:'translate3d(0,0,0)'}
+    ],{
+      duration:420,
+      easing:'cubic-bezier(.22,.8,.2,1)',
+      fill:'forwards'
+    });
+    Promise.allSettled([outgoing.finished,incoming.finished]).then(()=>{
+      if(runId!==tabPageTransitionId) return;
+      previousTab.classList.remove('tab-leaving');
+      nextTab.classList.remove('tab-entering');
+      outgoing.cancel();
+      incoming.cancel();
+    });
+  }
   function switchTab(name){
     const previousButton=document.querySelector('nav.tabbar button.active');
     const nextButton=document.querySelector('nav.tabbar button[data-tab="'+name+'"]');
     if(!nextButton) return;
+    const previousTab=previousButton ? document.getElementById('tab-'+previousButton.dataset.tab) : null;
+    const nextTab=document.getElementById('tab-'+name);
+    const previousVisual=captureTabPageVisual(previousTab);
+    const buttons=[...document.querySelectorAll('nav.tabbar button[data-tab]')];
+    const previousIndex=buttons.indexOf(previousButton);
+    const nextIndex=buttons.indexOf(nextButton);
+    const direction=previousIndex<0 || nextIndex>=previousIndex ? 1 : -1;
+    const transitionRunId=resetTabPageTransitions();
     if(previousButton!==nextButton) animateTabbar(nextButton);
     document.getElementById('app').dataset.activeTab=name;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('tab-'+name).classList.add('active');
+    nextTab.classList.add('active');
+    if(previousButton!==nextButton){
+      animateTabPage(previousTab,nextTab,direction,previousVisual,transitionRunId);
+    }
     document.querySelectorAll('nav.tabbar button').forEach(b=>{
       const active=b.dataset.tab===name;
       b.classList.toggle('active',active);
