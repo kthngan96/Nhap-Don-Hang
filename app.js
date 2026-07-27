@@ -90,6 +90,16 @@
       requestId:0
     };
   }
+  function createDatePickerState(){
+    return {
+      targetId:'',
+      trigger:null,
+      viewDate:null,
+      focusedDate:'',
+      holidaysByYear:new Map(),
+      requestId:0
+    };
+  }
   let state = {
     date: todayStr(),
     settings: Object.assign({}, DEFAULT_SETTINGS),
@@ -102,7 +112,8 @@
     avatarUrl: '',
     avatarBusy: false,
     history:createHistoryState(),
-    reportOverview:createReportOverviewState()
+    reportOverview:createReportOverviewState(),
+    datePicker:createDatePickerState()
   };
 
   // ---------- HELPERS ----------
@@ -119,6 +130,321 @@
   function pad(n){return n<10?'0'+n:''+n;}
   function fmtVND(n){ n = Math.round(n||0); return n.toLocaleString('vi-VN'); }
   function fmtDateVN(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+  function parseISODate(iso){
+    const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));
+    if(!match) return null;
+    const date=new Date(Number(match[1]),Number(match[2])-1,Number(match[3]),12);
+    return date.getFullYear()===Number(match[1])
+      && date.getMonth()===Number(match[2])-1
+      && date.getDate()===Number(match[3]) ? date : null;
+  }
+  function dateToISO(date){
+    return date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate());
+  }
+  function shiftCalendarDate(date,days){
+    const shifted=new Date(date);
+    shifted.setDate(shifted.getDate()+days);
+    return shifted;
+  }
+  function shiftCalendarMonth(date,months){
+    const day=date.getDate();
+    const shifted=new Date(date.getFullYear(),date.getMonth()+months,1,12);
+    const lastDay=new Date(shifted.getFullYear(),shifted.getMonth()+1,0,12).getDate();
+    shifted.setDate(Math.min(day,lastDay));
+    return shifted;
+  }
+  function pickerMonthYear(date){
+    return new Intl.DateTimeFormat('vi-VN',{month:'long',year:'numeric'}).format(date);
+  }
+  function pickerDayLabel(date,holiday){
+    const parts=[
+      new Intl.DateTimeFormat('vi-VN',{
+        weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'
+      }).format(date)
+    ];
+    if(date.getDay()===0) parts.push('Chủ nhật');
+    if(holiday) parts.push(holiday.name);
+    return parts.join(' · ');
+  }
+  function setDatePickerStatus(message,type){
+    const status=document.getElementById('datePickerStatus');
+    status.textContent=message || '';
+    status.className='date-picker-status'+(type ? ' '+type : '');
+  }
+  function holidayEntryForYear(year){
+    return state.datePicker.holidaysByYear.get(year) || null;
+  }
+  function holidayForDate(iso){
+    const year=Number(iso.slice(0,4));
+    const entry=holidayEntryForYear(year);
+    return entry && entry.rows && entry.rows.get(iso) || null;
+  }
+  function updateDatePickerStatus(iso){
+    const date=parseISODate(iso || state.datePicker.focusedDate);
+    if(!date) return;
+    const entry=holidayEntryForYear(date.getFullYear());
+    const holiday=holidayForDate(dateToISO(date));
+    if(holiday){
+      setDatePickerStatus(holiday.name,'holiday');
+      return;
+    }
+    const weeklyRest=date.getDay()===0 ? 'Chủ nhật · Ngày nghỉ hằng tuần' : '';
+    if(entry && entry.status==='loading'){
+      setDatePickerStatus(
+        weeklyRest ? weeklyRest+' · Đang tải lịch lễ/Tết…' : 'Đang tải lịch lễ/Tết…',
+        weeklyRest ? 'holiday' : ''
+      );
+    }else if(entry && entry.status==='error'){
+      setDatePickerStatus(
+        (weeklyRest ? weeklyRest+'. ' : '')+
+        'Không tải được lịch lễ/Tết. Bạn vẫn có thể chọn ngày.',
+        'error'
+      );
+    }else if(entry && entry.status==='ready' && entry.rows.size===0){
+      setDatePickerStatus(
+        (weeklyRest ? weeklyRest+'. ' : '')+
+        'Lịch lễ/Tết năm '+date.getFullYear()+' chưa được cập nhật.',
+        weeklyRest ? 'holiday' : ''
+      );
+    }else if(weeklyRest){
+      setDatePickerStatus(weeklyRest,'holiday');
+    }else{
+      setDatePickerStatus('');
+    }
+  }
+  async function loadHolidaysForYear(year){
+    const existing=holidayEntryForYear(year);
+    if(existing && (existing.status==='loading' || existing.status==='ready')) return;
+    const requestId=++state.datePicker.requestId;
+    state.datePicker.holidaysByYear.set(year,{status:'loading',rows:new Map(),requestId});
+    if(state.datePicker.viewDate && state.datePicker.viewDate.getFullYear()===year){
+      renderDatePicker();
+    }
+    if(!client || !state.user){
+      state.datePicker.holidaysByYear.set(year,{status:'error',rows:new Map(),requestId});
+      renderDatePicker();
+      return;
+    }
+    const {data,error}=await client.from('vietnam_holidays')
+      .select('holiday_date,name,holiday_type')
+      .eq('holiday_year',year)
+      .order('holiday_date',{ascending:true});
+    const current=holidayEntryForYear(year);
+    if(!current || current.requestId!==requestId) return;
+    if(error){
+      state.datePicker.holidaysByYear.set(year,{status:'error',rows:new Map(),requestId});
+    }else{
+      const rows=new Map((data||[]).map(row=>[row.holiday_date,row]));
+      state.datePicker.holidaysByYear.set(year,{status:'ready',rows,requestId});
+    }
+    if(state.datePicker.viewDate && state.datePicker.viewDate.getFullYear()===year){
+      renderDatePicker();
+    }
+  }
+  function renderDatePicker(){
+    const picker=state.datePicker;
+    if(!picker.viewDate) return;
+    const grid=document.getElementById('datePickerGrid');
+    const restoreGridFocus=grid.contains(document.activeElement);
+    const year=picker.viewDate.getFullYear();
+    const month=picker.viewDate.getMonth();
+    document.getElementById('datePickerMonth').textContent=pickerMonthYear(picker.viewDate);
+    const firstDay=new Date(year,month,1,12);
+    const mondayOffset=(firstDay.getDay()+6)%7;
+    const firstGridDate=shiftCalendarDate(firstDay,-mondayOffset);
+    const selectedInput=document.getElementById(picker.targetId);
+    const selectedISO=selectedInput && selectedInput.value || '';
+    const today=todayStr();
+    const days=[];
+    for(let index=0;index<42;index+=1){
+      const date=shiftCalendarDate(firstGridDate,index);
+      const iso=dateToISO(date);
+      const holiday=holidayForDate(iso);
+      const classes=['date-picker-day'];
+      if(date.getMonth()!==month) classes.push('adjacent');
+      if(date.getDay()===0) classes.push('sunday');
+      if(holiday) classes.push('holiday');
+      if(iso===today) classes.push('today');
+      if(iso===selectedISO) classes.push('selected');
+      const label=pickerDayLabel(date,holiday);
+      days.push(
+        '<button type="button" role="gridcell" class="'+classes.join(' ')+'"'+
+        ' data-date="'+iso+'" tabindex="'+(iso===picker.focusedDate ? '0' : '-1')+'"'+
+        ' aria-label="'+esc(label)+'" aria-selected="'+String(iso===selectedISO)+'"'+
+        ' title="'+esc(holiday ? holiday.name : (date.getDay()===0 ? 'Chủ nhật' : ''))+'">'+
+        date.getDate()+'</button>'
+      );
+    }
+    grid.innerHTML=days.join('');
+    updateDatePickerStatus(picker.focusedDate || selectedISO);
+    if(restoreGridFocus){
+      const focused=grid.querySelector('[data-date="'+picker.focusedDate+'"]');
+      if(focused) focused.focus();
+    }
+  }
+  function positionDatePicker(){
+    const picker=state.datePicker;
+    const popover=document.getElementById('datePickerPopover');
+    if(!picker.trigger || document.getElementById('datePickerLayer').hidden) return;
+    if(window.innerWidth<=480){
+      popover.style.removeProperty('left');
+      popover.style.removeProperty('top');
+      return;
+    }
+    const triggerRect=picker.trigger.getBoundingClientRect();
+    const popoverRect=popover.getBoundingClientRect();
+    const margin=10;
+    const left=Math.min(
+      Math.max(margin,triggerRect.left),
+      Math.max(margin,window.innerWidth-popoverRect.width-margin)
+    );
+    const below=triggerRect.bottom+8;
+    const above=triggerRect.top-popoverRect.height-8;
+    const top=below+popoverRect.height<=window.innerHeight-margin
+      ? below
+      : Math.max(margin,above);
+    popover.style.left=left+'px';
+    popover.style.top=top+'px';
+  }
+  function focusDatePickerDay(iso){
+    const date=parseISODate(iso);
+    if(!date) return;
+    state.datePicker.focusedDate=iso;
+    if(!state.datePicker.viewDate
+      || date.getFullYear()!==state.datePicker.viewDate.getFullYear()
+      || date.getMonth()!==state.datePicker.viewDate.getMonth()){
+      state.datePicker.viewDate=new Date(date.getFullYear(),date.getMonth(),1,12);
+      renderDatePicker();
+      positionDatePicker();
+      loadHolidaysForYear(date.getFullYear());
+    }else{
+      document.querySelectorAll('.date-picker-day').forEach(button=>{
+        button.tabIndex=button.dataset.date===iso ? 0 : -1;
+      });
+      updateDatePickerStatus(iso);
+    }
+    const button=document.querySelector('.date-picker-day[data-date="'+iso+'"]');
+    if(button) button.focus();
+  }
+  function closeDatePicker(restoreFocus){
+    const picker=state.datePicker;
+    const layer=document.getElementById('datePickerLayer');
+    if(layer.hidden) return;
+    const trigger=picker.trigger;
+    layer.hidden=true;
+    if(trigger) trigger.setAttribute('aria-expanded','false');
+    picker.targetId='';
+    picker.trigger=null;
+    picker.viewDate=null;
+    picker.focusedDate='';
+    if(restoreFocus && trigger) trigger.focus();
+  }
+  function openDatePicker(trigger){
+    const target=document.getElementById(trigger.dataset.dateTrigger);
+    if(!target) return;
+    if(!document.getElementById('datePickerLayer').hidden
+      && state.datePicker.trigger===trigger){
+      closeDatePicker(true);
+      return;
+    }
+    closeDatePicker(false);
+    const selected=parseISODate(target.value) || parseISODate(todayStr());
+    state.datePicker.targetId=target.id;
+    state.datePicker.trigger=trigger;
+    state.datePicker.viewDate=new Date(selected.getFullYear(),selected.getMonth(),1,12);
+    state.datePicker.focusedDate=dateToISO(selected);
+    trigger.setAttribute('aria-expanded','true');
+    document.getElementById('datePickerLayer').hidden=false;
+    renderDatePicker();
+    positionDatePicker();
+    loadHolidaysForYear(selected.getFullYear());
+    const button=document.querySelector('.date-picker-day[data-date="'+state.datePicker.focusedDate+'"]');
+    if(button) button.focus();
+  }
+  function selectDatePickerDay(iso){
+    const target=document.getElementById(state.datePicker.targetId);
+    if(!target) return;
+    target.value=iso;
+    closeDatePicker(false);
+    target.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  function changeDatePickerMonth(months){
+    const picker=state.datePicker;
+    if(!picker.viewDate) return;
+    const focused=parseISODate(picker.focusedDate) || picker.viewDate;
+    const shifted=shiftCalendarMonth(focused,months);
+    picker.viewDate=new Date(shifted.getFullYear(),shifted.getMonth(),1,12);
+    picker.focusedDate=dateToISO(shifted);
+    renderDatePicker();
+    positionDatePicker();
+    loadHolidaysForYear(shifted.getFullYear());
+    const button=document.querySelector('.date-picker-day[data-date="'+picker.focusedDate+'"]');
+    if(button) button.focus();
+  }
+  function setupDatePicker(){
+    document.querySelectorAll('[data-date-trigger]').forEach(trigger=>{
+      trigger.addEventListener('click',()=>openDatePicker(trigger));
+      trigger.addEventListener('keydown',event=>{
+        if(event.key==='ArrowDown'){
+          event.preventDefault();
+          openDatePicker(trigger);
+        }
+      });
+    });
+    document.getElementById('datePickerPrevious').addEventListener('click',()=>changeDatePickerMonth(-1));
+    document.getElementById('datePickerNext').addEventListener('click',()=>changeDatePickerMonth(1));
+    document.getElementById('datePickerGrid').addEventListener('click',event=>{
+      const button=event.target.closest('.date-picker-day');
+      if(button) selectDatePickerDay(button.dataset.date);
+    });
+    document.getElementById('datePickerGrid').addEventListener('focusin',event=>{
+      const button=event.target.closest('.date-picker-day');
+      if(button){
+        state.datePicker.focusedDate=button.dataset.date;
+        updateDatePickerStatus(button.dataset.date);
+      }
+    });
+    document.getElementById('datePickerGrid').addEventListener('keydown',event=>{
+      const button=event.target.closest('.date-picker-day');
+      if(!button) return;
+      const date=parseISODate(button.dataset.date);
+      let next=null;
+      if(event.key==='ArrowLeft') next=shiftCalendarDate(date,-1);
+      if(event.key==='ArrowRight') next=shiftCalendarDate(date,1);
+      if(event.key==='ArrowUp') next=shiftCalendarDate(date,-7);
+      if(event.key==='ArrowDown') next=shiftCalendarDate(date,7);
+      if(event.key==='Home') next=shiftCalendarDate(date,-((date.getDay()+6)%7));
+      if(event.key==='End') next=shiftCalendarDate(date,6-((date.getDay()+6)%7));
+      if(event.key==='PageUp') next=shiftCalendarMonth(date,-1);
+      if(event.key==='PageDown') next=shiftCalendarMonth(date,1);
+      if(event.key==='Enter' || event.key===' '){
+        event.preventDefault();
+        selectDatePickerDay(button.dataset.date);
+        return;
+      }
+      if(next){
+        event.preventDefault();
+        focusDatePickerDay(dateToISO(next));
+      }
+    });
+    document.addEventListener('pointerdown',event=>{
+      const layer=document.getElementById('datePickerLayer');
+      if(layer.hidden) return;
+      const popover=document.getElementById('datePickerPopover');
+      if(popover.contains(event.target)
+        || (state.datePicker.trigger && state.datePicker.trigger.contains(event.target))) return;
+      closeDatePicker(false);
+    },true);
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape' && !document.getElementById('datePickerLayer').hidden){
+        event.preventDefault();
+        event.stopPropagation();
+        closeDatePicker(true);
+      }
+    },true);
+    window.addEventListener('resize',positionDatePicker);
+    window.addEventListener('scroll',positionDatePicker,true);
+  }
   function profileInitials(){
     const metadata=state.user && state.user.user_metadata || {};
     const source=(state.settings && state.settings.nvbh) || metadata.display_name || metadata.username ||
@@ -312,6 +638,7 @@
 
   // ---------- AUTH / ONLINE GATE ----------
   function showAuth(){
+    closeDatePicker(false);
     document.getElementById('authShell').hidden = false;
     document.getElementById('app').hidden = true;
     document.getElementById('loginForm').hidden = recoveryMode;
@@ -326,6 +653,7 @@
     requestAnimationFrame(syncTabbarVisual);
   }
   function clearAccountState(){
+    closeDatePicker(false);
     bootingForUser = null;
     state.session = null;
     state.user = null;
@@ -338,6 +666,7 @@
     state.orderDraftBeforeEdit = null;
     state.history = createHistoryState();
     state.reportOverview = createReportOverviewState();
+    state.datePicker = createDatePickerState();
     resetOrderForm();
     syncOrderFormMode();
     renderToday();
@@ -2132,6 +2461,7 @@
     });
   }
   function switchTab(name){
+    closeDatePicker(false);
     closeOrderMenus();
     const previousButton=document.querySelector('nav.tabbar button.active');
     const nextButton=document.querySelector('nav.tabbar button[data-tab="'+name+'"]');
@@ -2324,6 +2654,7 @@
     return session;
   }
   async function initAuth(){
+    setupDatePicker();
     renderCurrentDateTimeVN();
     setInterval(renderCurrentDateTimeVN,1000);
     renderFilterOptions();

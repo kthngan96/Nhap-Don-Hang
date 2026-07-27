@@ -19,6 +19,12 @@
    `nhanhtv234` khỏi Supabase Auth. Các bản ghi liên quan được xóa theo khóa
    ngoại `on delete cascade`; migration có kiểm tra email nội bộ và quyền quản
    trị trước khi xóa để không thể nhầm tài khoản Hữu Thi.
+
+   Migration `202607270004_vietnam_holidays.sql` tạo bảng lịch nghỉ Việt Nam
+   chỉ đọc đối với người dùng đã đăng nhập và seed idempotent lịch chính thức
+   năm 2025–2026. Frontend release `20260727.13` cần migration này để hiển thị
+   tên lễ/Tết và ngày nghỉ bù; nếu bảng chưa sẵn sàng, lịch vẫn cho chọn ngày
+   và chỉ đánh dấu Chủ nhật.
 2. Trong **Authentication > URL Configuration**:
    - đặt Site URL bằng URL triển khai ứng dụng;
    - thêm URL triển khai và URL localhost vào Redirect URLs.
