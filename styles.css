@@ -237,11 +237,12 @@
     box-shadow:0 14px 34px rgba(53,39,31,.14),0 4px 12px rgba(53,39,31,.08);
   }
   .tabbar-curve{
-    position:absolute;z-index:0;top:-30px;left:0;width:96px;height:54px;
-    transform:translate3d(0,0,0);pointer-events:none;filter:drop-shadow(0 -6px 8px rgba(53,39,31,.065));
+    position:absolute;z-index:1;top:-20px;left:0;width:92px;height:54px;
+    transform:translate3d(0,0,0);pointer-events:none;
   }
-  .tabbar-curve svg{display:block;width:100%;height:100%;overflow:visible;}
-  .tabbar-curve path{fill:#fff;}
+  .tabbar-curve svg{display:block;width:100%;height:100%;overflow:hidden;}
+  .tabbar-curve path{fill:var(--bg);}
+  .tabbar-curve circle{fill:#fff;stroke:rgba(230,220,212,.7);stroke-width:.75;}
   .tabbar-wash{
     position:absolute;z-index:1;top:50%;left:0;width:90px;height:90px;
     border-radius:50%;background:#FBE4DC;opacity:0;transform:translate(-50%,-50%) scale(.15);
@@ -371,6 +372,7 @@
   .migration-actions .btn{flex:1;padding-inline:10px;}
 
   @media (max-width:380px){
+    .tabbar-curve{top:-17px;width:76px;height:45px;}
     .auth-card{padding:22px 17px;}
     .account-row{align-items:flex-start;flex-direction:column;gap:7px;}
     .btn-signout{align-self:flex-start;}
