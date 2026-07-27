@@ -14,6 +14,11 @@
    tháng với RLS và nhập số dư 20–25/07/2026 cho tài khoản Hữu Thi. Migration
    này phải được áp dụng trước frontend release `20260727.10`; nó không tạo đơn
    hàng hoặc báo cáo ngày giả.
+
+   Migration `202607270003_delete_nhanhtv234_account.sql` xóa tài khoản username
+   `nhanhtv234` khỏi Supabase Auth. Các bản ghi liên quan được xóa theo khóa
+   ngoại `on delete cascade`; migration có kiểm tra email nội bộ và quyền quản
+   trị trước khi xóa để không thể nhầm tài khoản Hữu Thi.
 2. Trong **Authentication > URL Configuration**:
    - đặt Site URL bằng URL triển khai ứng dụng;
    - thêm URL triển khai và URL localhost vào Redirect URLs.

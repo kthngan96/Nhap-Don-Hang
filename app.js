@@ -2169,6 +2169,18 @@
   });
 
   // ---------- INIT ----------
+  async function verifyActiveSession(session){
+    if(!session || !navigator.onLine) return session;
+    const {data,error}=await client.auth.getUser();
+    if(!error && data && data.user){
+      return Object.assign({},session,{user:data.user});
+    }
+    if(error && (error.status===401 || error.status===403)){
+      await client.auth.signOut({scope:'local'});
+      return null;
+    }
+    return session;
+  }
   async function initAuth(){
     renderCurrentDateTimeVN();
     setInterval(renderCurrentDateTimeVN,1000);
@@ -2200,7 +2212,7 @@
           showAuth();
           return;
         }
-        await handleSession(session);
+        await handleSession(await verifyActiveSession(session));
       },0);
     });
     const {data,error}=await client.auth.getSession();
@@ -2217,7 +2229,7 @@
       showAuth();
       return;
     }
-    await handleSession(data.session);
+    await handleSession(await verifyActiveSession(data.session));
   }
   initAuth();
 })();
