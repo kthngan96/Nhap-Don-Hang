@@ -9,14 +9,17 @@ báo cáo ngày và tổng hợp KPI theo tháng.
 - Dữ liệu cấu hình, đơn hàng và báo cáo tách biệt theo từng tài khoản bằng RLS.
 - Lấy GPS và tự động điền địa chỉ thông qua Google Maps Geocoding.
 - Theo dõi doanh số ngày/tháng, khách hàng mới và doanh số gia vị.
+- Hiển thị hồ sơ NVBH và lưu ảnh đại diện riêng tư trong Supabase Storage.
 - Sao chép hoặc chia sẻ mẫu đơn và báo cáo.
 - Nhập dữ liệu cũ từ bộ nhớ trình duyệt vào tài khoản trong lần đăng nhập đầu.
 
 ## Cấu trúc
 
-- `index.html`: giao diện và logic ứng dụng.
+- `index.html`: cấu trúc giao diện.
+- `styles.css`: design system và responsive layout.
+- `app.js`: trạng thái, nghiệp vụ và kết nối Supabase.
 - `config.js`: Supabase Project URL và publishable key dành cho trình duyệt.
-- `supabase/migrations/`: schema database và chính sách Row Level Security.
+- `supabase/migrations/`: schema database, Storage bucket và chính sách Row Level Security.
 - `supabase/functions/reverse-geocode/`: Edge Function đổi GPS thành địa chỉ.
 - `bang_gia.md` và `bang_gia.jpg`: bảng giá tham khảo.
 

@@ -5,6 +5,10 @@
    ```powershell
    supabase db push
    ```
+   Migration avatar tạo private bucket `avatars`, thêm `user_settings.avatar_path`
+   và các policy Storage để mỗi người dùng chỉ đọc/ghi
+   `{auth.uid()}/avatar.webp`. Phải chạy migration này trước khi triển khai
+   frontend có chức năng đổi ảnh đại diện.
 2. Trong **Authentication > URL Configuration**:
    - đặt Site URL bằng URL triển khai ứng dụng;
    - thêm URL triển khai và URL localhost vào Redirect URLs.
@@ -39,6 +43,10 @@
 `SUPABASE_ANON_KEY` được phép xuất hiện ở trình duyệt. Việc cô lập dữ liệu được
 thực thi bởi Row Level Security trong migration. Không đưa service-role key hoặc
 Google Maps API key vào `index.html` hay `config.js`.
+
+Ảnh nguồn được trình duyệt cắt vuông, thu tối đa 512×512 và nén WebP trước khi
+upload. Bucket `avatars` là private; ứng dụng chỉ hiển thị ảnh bằng signed URL
+có thời hạn và không lưu signed URL vào database.
 
 Tài khoản tên đăng nhập có thể dùng mật khẩu ngắn theo yêu cầu nghiệp vụ. Trình
 duyệt và Edge Function cùng chuyển mật khẩu đó thành chuỗi xác thực SHA-256 trước

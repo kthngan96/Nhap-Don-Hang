@@ -62,12 +62,28 @@
       </span>
       <h1>Sổ Báo Cáo NVBH</h1>
     </div>
-    <div class="account-row">
-      <div class="account-email" id="accountEmail"></div>
-      <button class="btn-signout" id="btnSignOut" type="button">
-        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.7-4 3.2-6 7.5-6s6.8 2 7.5 6"/></svg>
-        Đăng xuất
+    <div class="account-area">
+      <button class="account-trigger" id="btnAccountMenu" type="button" aria-expanded="false" aria-controls="accountMenu" aria-haspopup="menu">
+        <span class="avatar avatar-nav" aria-hidden="true">
+          <img id="navbarAvatarImage" alt="" hidden>
+          <span id="navbarAvatarInitials">HT</span>
+        </span>
+        <span class="account-identity">
+          <strong id="navbarNvbh">Hữu Thi</strong>
+          <small id="navbarNpp">Thuận Lợi · Trà Vinh</small>
+        </span>
+        <svg class="ui-icon account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
       </button>
+      <div class="account-menu" id="accountMenu" role="menu" hidden>
+        <div class="account-menu-heading">
+          <strong id="accountMenuName">Hữu Thi</strong>
+          <span class="account-email" id="accountEmail"></span>
+        </div>
+        <button class="account-signout" id="btnSignOut" type="button" role="menuitem">
+          <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>
+          Đăng xuất
+        </button>
+      </div>
     </div>
     <div class="sub" id="hdrNppNvbh">Npp: — · NVBH: —</div>
   </header>
@@ -267,6 +283,33 @@
     <section class="tab" id="tab-settings">
       <h2 class="screen-title">Cấu hình</h2>
       <div class="card">
+        <section class="profile-settings" aria-labelledby="profileSettingsTitle">
+          <div class="profile-avatar-wrap">
+            <span class="avatar avatar-settings" aria-hidden="true">
+              <img id="settingsAvatarImage" alt="" hidden>
+              <span id="settingsAvatarInitials">HT</span>
+            </span>
+            <button class="avatar-camera" id="btnAvatarCamera" type="button" aria-label="Đổi ảnh đại diện">
+              <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l1.5-2h5L16 8h4v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </button>
+          </div>
+          <div class="profile-settings-body">
+            <h2 id="profileSettingsTitle"><span id="settingsProfileName">Hữu Thi</span></h2>
+            <p id="settingsProfileNpp">Thuận Lợi · Trà Vinh</p>
+            <div class="profile-actions">
+              <label class="btn-avatar-change" for="avatarInput">
+                <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l1.5-2h5L16 8h4v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Đổi ảnh đại diện
+              </label>
+              <button class="btn-avatar-remove" id="btnRemoveAvatar" type="button">Xóa ảnh</button>
+              <input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+            </div>
+          </div>
+        </section>
+        <div class="avatar-status" id="avatarStatus" role="status" aria-live="polite" hidden>
+          <span class="avatar-spinner" aria-hidden="true"></span>
+          <span>Đang tải ảnh…</span>
+        </div>
         <h2><span class="section-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5V10l-2-.7-.8-1.9.9-1.9-2.6-2-1.6 1.3h-2L9.3 3.5l-2.6 2 .9 1.9-.8 1.9-2 .7v3.5l2 .7.8 1.9-.9 1.9 2.6 2 1.6-1.3h2l1.6 1.3 2.6-2-.9-1.9.8-1.9Z"/></svg></span> Thông tin &amp; chỉ tiêu</h2>
         <div class="field"><label for="s_npp">Npp (Nhà phân phối)</label><input type="text" id="s_npp"></div>
         <div class="field"><label for="s_nvbh">NVBH (Nhân viên bán hàng)</label><input type="text" id="s_nvbh"></div>

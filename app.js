@@ -28,10 +28,16 @@
     'Thành phố Trà Vinh'
   ];
   const HISTORY_PAGE_SIZE = 30;
+  const AVATAR_BUCKET = 'avatars';
+  const AVATAR_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
+  const AVATAR_SIZE = 512;
+  const AVATAR_QUALITY = .82;
+  const AVATAR_TYPES = new Set(['image/jpeg','image/png','image/webp']);
 
   const DEFAULT_SETTINGS = {
     npp:'Thuận Lợi - Trà Vinh',
     nvbh:'Hữu Thi',
+    avatarPath:null,
     targetDaily:3426000,
     targetMonthly:90000000,
     targetASO:50,
@@ -82,6 +88,8 @@
     session: null,
     user: null,
     pendingLocation: null,
+    avatarUrl: '',
+    avatarBusy: false,
     history:createHistoryState()
   };
 
@@ -100,6 +108,41 @@
   function fmtVND(n){ n = Math.round(n||0); return n.toLocaleString('vi-VN'); }
   function fmtReportMoney(n){ return Math.round((n||0)/1000).toLocaleString('vi-VN'); }
   function fmtDateVN(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+  function profileInitials(){
+    const metadata=state.user && state.user.user_metadata || {};
+    const source=(state.settings && state.settings.nvbh) || metadata.display_name || metadata.username ||
+      (state.user && state.user.email && state.user.email.split('@')[0]) || 'NV';
+    const words=String(source).trim().split(/\s+/).filter(Boolean);
+    if(!words.length) return 'NV';
+    return (words.length===1 ? words[0].slice(0,2) : words[0][0]+words[words.length-1][0]).toUpperCase();
+  }
+  function renderAvatarPair(imageId,initialsId){
+    const image=document.getElementById(imageId);
+    const initials=document.getElementById(initialsId);
+    initials.textContent=profileInitials();
+    if(state.avatarUrl){
+      image.src=state.avatarUrl;
+      image.hidden=false;
+      initials.hidden=true;
+    }else{
+      image.removeAttribute('src');
+      image.hidden=true;
+      initials.hidden=false;
+    }
+  }
+  function renderProfile(){
+    const settings=state.settings || DEFAULT_SETTINGS;
+    const nvbh=settings.nvbh || DEFAULT_SETTINGS.nvbh;
+    const npp=settings.npp || DEFAULT_SETTINGS.npp;
+    document.getElementById('navbarNvbh').textContent=nvbh;
+    document.getElementById('navbarNpp').textContent=npp;
+    document.getElementById('accountMenuName').textContent=nvbh;
+    document.getElementById('settingsProfileName').textContent=nvbh;
+    document.getElementById('settingsProfileNpp').textContent=npp;
+    renderAvatarPair('navbarAvatarImage','navbarAvatarInitials');
+    renderAvatarPair('settingsAvatarImage','settingsAvatarInitials');
+    document.getElementById('btnRemoveAvatar').disabled=state.avatarBusy || !settings.avatarPath;
+  }
   function renderSelectedDate(){
     document.getElementById('dateDisplay').textContent=fmtDateVN(state.date);
     const todayDateLabel=document.getElementById('todayDateLabel');
@@ -264,12 +307,15 @@
     document.getElementById('app').hidden = false;
     const metadata = state.user && state.user.user_metadata || {};
     document.getElementById('accountEmail').textContent = metadata.username || (state.user && state.user.email) || '';
+    renderProfile();
   }
   function clearAccountState(){
     bootingForUser = null;
     state.session = null;
     state.user = null;
     state.settings = Object.assign({}, DEFAULT_SETTINGS, {prices:{}});
+    state.avatarUrl = '';
+    state.avatarBusy = false;
     state.orders = [];
     state.pendingLocation = null;
     state.history = createHistoryState();
@@ -470,6 +516,7 @@
       user_id:state.user.id,
       npp:settings.npp || '',
       nvbh:settings.nvbh || '',
+      avatar_path:settings.avatarPath || null,
       target_daily:Number(settings.targetDaily)||0,
       target_monthly:Number(settings.targetMonthly)||0,
       target_aso:Number(settings.targetASO)||0,
@@ -555,12 +602,174 @@
     }
   }
 
+  // ---------- SALESPERSON PROFILE / AVATAR ----------
+  async function refreshAvatarUrl(){
+    state.avatarUrl='';
+    const path=state.settings && state.settings.avatarPath;
+    if(!path || !client || !state.user) return;
+    const {data,error}=await client.storage.from(AVATAR_BUCKET).createSignedUrl(path,60*60);
+    if(error){
+      console.error('Avatar signed URL failed',error);
+      return;
+    }
+    state.avatarUrl=data && data.signedUrl
+      ? data.signedUrl+(data.signedUrl.includes('?')?'&':'?')+'v='+Date.now()
+      : '';
+  }
+  function setAvatarBusy(busy){
+    state.avatarBusy=busy;
+    const input=document.getElementById('avatarInput');
+    const camera=document.getElementById('btnAvatarCamera');
+    const remove=document.getElementById('btnRemoveAvatar');
+    const change=document.querySelector('.btn-avatar-change');
+    const status=document.getElementById('avatarStatus');
+    input.disabled=busy;
+    camera.disabled=busy;
+    remove.disabled=busy || !(state.settings && state.settings.avatarPath);
+    change.classList.toggle('is-disabled',busy);
+    status.hidden=!busy;
+    status.classList.remove('error');
+  }
+  function decodeAvatarSource(file){
+    if(window.createImageBitmap){
+      const wrapBitmap=bitmap=>({
+        source:bitmap,
+        width:bitmap.width,
+        height:bitmap.height,
+        cleanup:()=>bitmap.close()
+      });
+      return createImageBitmap(file,{imageOrientation:'from-image'})
+        .catch(()=>createImageBitmap(file))
+        .then(wrapBitmap)
+        .catch(()=>decodeAvatarWithImage(file));
+    }
+    return decodeAvatarWithImage(file);
+  }
+  function decodeAvatarWithImage(file){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file);
+      const image=new Image();
+      image.onload=()=>resolve({
+        source:image,
+        width:image.naturalWidth,
+        height:image.naturalHeight,
+        cleanup:()=>URL.revokeObjectURL(url)
+      });
+      image.onerror=()=>{
+        URL.revokeObjectURL(url);
+        reject(new Error('Không thể đọc ảnh đã chọn.'));
+      };
+      image.src=url;
+    });
+  }
+  async function cropAvatarFile(file){
+    if(!AVATAR_TYPES.has(file.type)) throw new Error('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.');
+    if(file.size>AVATAR_MAX_SOURCE_BYTES) throw new Error('Ảnh đại diện không được vượt quá 10MB.');
+    const decoded=await decodeAvatarSource(file);
+    try{
+      if(!decoded.width || !decoded.height) throw new Error('Kích thước ảnh không hợp lệ.');
+      const crop=Math.min(decoded.width,decoded.height);
+      const sx=(decoded.width-crop)/2;
+      const sy=(decoded.height-crop)/2;
+      const target=Math.min(AVATAR_SIZE,crop);
+      const canvas=document.createElement('canvas');
+      canvas.width=target;
+      canvas.height=target;
+      const context=canvas.getContext('2d',{alpha:false});
+      if(!context) throw new Error('Trình duyệt không thể xử lý ảnh.');
+      context.imageSmoothingEnabled=true;
+      context.imageSmoothingQuality='high';
+      context.drawImage(decoded.source,sx,sy,crop,crop,0,0,target,target);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',AVATAR_QUALITY));
+      if(!blob || blob.type!=='image/webp') throw new Error('Trình duyệt không hỗ trợ nén ảnh WebP.');
+      if(blob.size>2*1024*1024) throw new Error('Ảnh sau xử lý vẫn vượt quá 2MB.');
+      return blob;
+    }finally{
+      decoded.cleanup();
+    }
+  }
+  async function updateAvatarPath(path){
+    const {data,error}=await client.from('user_settings')
+      .upsert(settingsToRow(Object.assign({},state.settings,{avatarPath:path})))
+      .select('avatar_path')
+      .maybeSingle();
+    throwQueryError(error,'Không thể lưu ảnh đại diện.');
+    if(!data) throw new Error('Không thể xác nhận ảnh đại diện đã lưu.');
+  }
+  async function uploadAvatar(file){
+    if(!requireOnline() || !file || state.avatarBusy) return;
+    setAvatarBusy(true);
+    const previousPath=state.settings.avatarPath;
+    const path=state.user.id+'/avatar.webp';
+    try{
+      const blob=await cropAvatarFile(file);
+      const {error:uploadError}=await client.storage.from(AVATAR_BUCKET).upload(path,blob,{
+        contentType:'image/webp',
+        cacheControl:'3600',
+        upsert:true
+      });
+      throwQueryError(uploadError,'Không thể tải ảnh đại diện lên.');
+      try{
+        await updateAvatarPath(path);
+      }catch(error){
+        if(!previousPath) await client.storage.from(AVATAR_BUCKET).remove([path]);
+        throw error;
+      }
+      state.settings.avatarPath=path;
+      await refreshAvatarUrl();
+      renderProfile();
+      showToast('Đã cập nhật ảnh đại diện');
+    }catch(error){
+      console.error(error);
+      showToast(error.message || 'Không thể cập nhật ảnh đại diện.');
+    }finally{
+      document.getElementById('avatarInput').value='';
+      setAvatarBusy(false);
+    }
+  }
+  async function removeAvatar(){
+    if(!requireOnline() || state.avatarBusy || !state.settings.avatarPath) return;
+    if(!confirm('Xóa ảnh đại diện hiện tại?')) return;
+    setAvatarBusy(true);
+    const path=state.settings.avatarPath;
+    try{
+      const {error:removeError}=await client.storage.from(AVATAR_BUCKET).remove([path]);
+      throwQueryError(removeError,'Không thể xóa ảnh đại diện.');
+      await updateAvatarPath(null);
+      state.settings.avatarPath=null;
+      state.avatarUrl='';
+      renderProfile();
+      showToast('Đã xóa ảnh đại diện');
+    }catch(error){
+      console.error(error);
+      try{
+        await loadSettings();
+        renderProfile();
+      }catch(refreshError){
+        console.error(refreshError);
+      }
+      showToast(error.message || 'Không thể xóa ảnh đại diện.');
+    }finally{
+      setAvatarBusy(false);
+    }
+  }
+  function setAccountMenu(open){
+    const trigger=document.getElementById('btnAccountMenu');
+    const menu=document.getElementById('accountMenu');
+    trigger.setAttribute('aria-expanded',String(open));
+    menu.hidden=!open;
+  }
+  function toggleAccountMenu(){
+    setAccountMenu(document.getElementById('btnAccountMenu').getAttribute('aria-expanded')!=='true');
+  }
+
   // ---------- DATABASE LOAD / SAVE ----------
   function rowToSettings(row){
     if(!row) return Object.assign({},DEFAULT_SETTINGS,{prices:{}});
     return {
       npp:row.npp || DEFAULT_SETTINGS.npp,
       nvbh:row.nvbh || DEFAULT_SETTINGS.nvbh,
+      avatarPath:row.avatar_path || null,
       targetDaily:Number(row.target_daily)||0,
       targetMonthly:Number(row.target_monthly)||0,
       targetASO:Number(row.target_aso)||0,
@@ -606,6 +815,7 @@
       .select('*').eq('user_id',state.user.id).maybeSingle();
     throwQueryError(error,'Không thể tải cấu hình.');
     state.settings = rowToSettings(data);
+    await refreshAvatarUrl();
   }
   async function loadOrdersForDate(date){
     const {data,error} = await client.from('orders')
@@ -1372,6 +1582,7 @@
     document.getElementById('hdrNppNvbh').textContent = 'Npp: '+s.npp+' · NVBH: '+s.nvbh;
     document.getElementById('workContextCopy').innerHTML =
       '<strong>Npp:</strong> '+esc(s.npp)+'<br><strong>NVBH:</strong> '+esc(s.nvbh);
+    renderProfile();
   }
 
   async function saveSettingsForm(){
@@ -1444,6 +1655,31 @@
   document.getElementById('resetForm').addEventListener('submit',updatePassword);
   document.getElementById('btnForgotPassword').addEventListener('click',sendPasswordReset);
   document.getElementById('btnSignOut').addEventListener('click',signOut);
+  document.getElementById('btnAccountMenu').addEventListener('click',toggleAccountMenu);
+  document.addEventListener('click',event=>{
+    const accountArea=event.target.closest('.account-area');
+    if(!accountArea) setAccountMenu(false);
+  });
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape' && document.getElementById('btnAccountMenu').getAttribute('aria-expanded')==='true'){
+      setAccountMenu(false);
+      document.getElementById('btnAccountMenu').focus();
+    }
+  });
+  document.getElementById('btnAvatarCamera').addEventListener('click',()=>{
+    if(!state.avatarBusy) document.getElementById('avatarInput').click();
+  });
+  document.getElementById('avatarInput').addEventListener('change',event=>{
+    const file=event.target.files && event.target.files[0];
+    if(file) uploadAvatar(file);
+  });
+  document.getElementById('btnRemoveAvatar').addEventListener('click',removeAvatar);
+  ['navbarAvatarImage','settingsAvatarImage'].forEach(id=>{
+    document.getElementById(id).addEventListener('error',()=>{
+      state.avatarUrl='';
+      renderProfile();
+    });
+  });
   document.getElementById('btnLocation').addEventListener('click',captureLocation);
   document.getElementById('todayList').addEventListener('click',event=>{
     const button=event.target.closest('[data-order-action]');
