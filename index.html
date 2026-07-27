@@ -1968,13 +1968,13 @@
 - NVBH: ${s.nvbh}
 - Tiến độ thời gian: ${daysReported}/${s.workDays} ngày (${pctTienDo.toFixed(0)}%)
 1. Doanh số thực hiện (ĐVT: 000đ)
-- TH/CT ngày: ${fmtVND(todayReport.revenue)}/${fmtReportMoney(s.targetDaily)}/${pctNgay.toFixed(1)}%
-- CD/CT tháng: ${fmtVND(cdRevenue)}/${fmtReportMoney(s.targetMonthly)}/${pctThang.toFixed(1)}%
+- TH/CT ngày: ${fmtReportMoney(todayReport.revenue)}/${fmtReportMoney(s.targetDaily)}/${pctNgay.toFixed(1)}%
+- CD/CT tháng: ${fmtReportMoney(cdRevenue)}/${fmtReportMoney(s.targetMonthly)}/${pctThang.toFixed(1)}%
 2. Đơn hàng thành công: ${todayReport.orderCount}đh
 3. KPI
 - KPI 1 - ASO : ${todayReport.newCustomers.length}/${phoneSet.size}/${s.targetASO}/${pctASO.toFixed(0)}%
 - KPI 2 - CT ngày: ${daysAchieved}/${daysReported} ngày đạt
-- KPI 3 - Gia vị: ${fmtVND(todayReport.giaVi)}/${fmtVND(cdGiaVi)}/${fmtReportMoney(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
+- KPI 3 - Gia vị: ${fmtReportMoney(todayReport.giaVi)}/${fmtReportMoney(cdGiaVi)}/${fmtReportMoney(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
 
     document.getElementById('reportText').textContent = text;
   }
