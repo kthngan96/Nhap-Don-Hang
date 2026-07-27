@@ -249,8 +249,8 @@
   .tabbar-surface-fill{fill:#fff;stroke:rgba(230,220,212,.9);stroke-width:1;}
   .tabbar-notch{transform-box:view-box;transform-origin:0 0;pointer-events:none;}
   .tabbar-crown{
-    position:absolute;z-index:1;top:-26px;left:0;width:32px;height:32px;border-radius:50%;
-    background:#fff;transform:translate3d(0,0,0);pointer-events:none;
+    position:absolute;z-index:1;top:-22px;left:0;width:28px;height:28px;border-radius:50%;
+    background:#E24A1A;transform:translate3d(0,0,0);pointer-events:none;
   }
   .tabbar-wash{
     position:absolute;z-index:1;top:50%;left:0;width:90px;height:90px;
@@ -278,8 +278,8 @@
   }
   nav.tabbar button.visual-active{color:var(--maroon);font-weight:700;}
   nav.tabbar button.visual-active .ui-icon{
-    top:17px;margin-left:-13px;width:26px;height:26px;padding:6px;
-    color:#fff;background:var(--gold);stroke-width:2.1;
+    top:13px;margin-left:-15px;width:30px;height:30px;padding:7px;
+    color:#fff;background:var(--maroon);stroke-width:2.1;
   }
   nav.tabbar button.visual-active > span{
     max-height:15px;opacity:1;transform:translateY(0) scale(1);
@@ -629,5 +629,5 @@
     .tab.tab-leaving{left:20px;right:20px;}
   }
   @media (min-width:560px){
-    .tabbar-crown{top:-32px;width:40px;height:40px;}
+    .tabbar-crown{top:-26px;width:32px;height:32px;}
   }
