@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260727.1">
+<link rel="stylesheet" href="styles.css?v=20260727.2">
 </head>
 <body>
 <section class="auth-shell" id="authShell">
@@ -330,12 +330,16 @@
   </main>
 
   <nav class="tabbar" aria-label="Điều hướng chính">
-    <span class="tabbar-curve" aria-hidden="true">
-      <svg viewBox="0 0 92 54" focusable="false">
-        <path d="M0 20c14 0 17 3 23 10 7 8 12 12 23 12s16-4 23-12c6-7 9-10 23-10V0H0Z"/>
-        <circle cx="46" cy="10" r="16"/>
-      </svg>
-    </span>
+    <svg class="tabbar-surface" aria-hidden="true" focusable="false">
+      <defs>
+        <mask id="tabbarSurfaceMask" maskUnits="userSpaceOnUse" mask-type="luminance">
+          <rect class="tabbar-mask-base" x="0" y="0" fill="#fff"/>
+          <path class="tabbar-notch" fill="#000" d="M-46-1c14 0 17 3 23 11 7 9 12 13 23 13s16-4 23-13c6-8 9-11 23-11v-20h-92Z"/>
+        </mask>
+      </defs>
+      <rect class="tabbar-surface-fill" x=".5" y=".5" rx="17.5" mask="url(#tabbarSurfaceMask)"/>
+    </svg>
+    <span class="tabbar-crown" aria-hidden="true"></span>
     <span class="tabbar-wash" aria-hidden="true"></span>
     <button data-tab="order" class="active visual-active" aria-current="page"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10v16H5V9"/><path d="M3 5h8M7 1v8"/></svg><span>Nhập đơn</span></button>
     <button data-tab="today"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg><span>Hôm nay</span></button>
@@ -367,6 +371,6 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=20260727.1"></script>
+<script src="app.js?v=20260727.2"></script>
 </body>
 </html>

@@ -1621,46 +1621,82 @@
     const buttonRect=button.getBoundingClientRect();
     return buttonRect.left-tabbarRect.left+buttonRect.width/2;
   }
+  function tabbarNotchScale(tabbar){
+    return tabbar.offsetWidth<=360 ? .83 : 1;
+  }
+  function tabbarNotchTransform(center,tabbar){
+    return 'translate('+center+'px,0px) scaleX('+tabbarNotchScale(tabbar)+')';
+  }
+  function syncTabbarSurfaceGeometry(tabbar){
+    const width=tabbar.clientWidth;
+    const height=tabbar.clientHeight;
+    if(!width || !height) return;
+    const surface=tabbar.querySelector('.tabbar-surface');
+    const mask=surface.querySelector('#tabbarSurfaceMask');
+    const maskBase=surface.querySelector('.tabbar-mask-base');
+    const surfaceFill=surface.querySelector('.tabbar-surface-fill');
+    surface.setAttribute('viewBox','0 0 '+width+' '+height);
+    mask.setAttribute('x','0');
+    mask.setAttribute('y','0');
+    mask.setAttribute('width',String(width));
+    mask.setAttribute('height',String(height));
+    maskBase.setAttribute('width',String(width));
+    maskBase.setAttribute('height',String(height));
+    surfaceFill.setAttribute('width',String(Math.max(0,width-1)));
+    surfaceFill.setAttribute('height',String(Math.max(0,height-1)));
+  }
   function placeTabbarVisual(button){
     const tabbar=document.querySelector('nav.tabbar');
-    const curve=tabbar.querySelector('.tabbar-curve');
+    const crown=tabbar.querySelector('.tabbar-crown');
+    const notch=tabbar.querySelector('.tabbar-notch');
     const wash=tabbar.querySelector('.tabbar-wash');
     if(!button || !tabbar.offsetWidth) return;
+    syncTabbarSurfaceGeometry(tabbar);
     const center=tabbarCenter(button,tabbar);
-    curve.style.transform='translate3d('+(center-curve.offsetWidth/2)+'px,0,0)';
+    crown.style.transform='translate3d('+(center-crown.offsetWidth/2)+'px,0,0)';
+    notch.style.transform=tabbarNotchTransform(center,tabbar);
     wash.style.left=center+'px';
   }
   function animateTabbar(nextButton){
     const tabbar=document.querySelector('nav.tabbar');
-    const curve=tabbar.querySelector('.tabbar-curve');
+    const crown=tabbar.querySelector('.tabbar-crown');
+    const notch=tabbar.querySelector('.tabbar-notch');
     const wash=tabbar.querySelector('.tabbar-wash');
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tabbarRect=tabbar.getBoundingClientRect();
-    const currentX=curve.getBoundingClientRect().left-tabbarRect.left;
+    const crownRect=crown.getBoundingClientRect();
+    const currentCenter=crownRect.left-tabbarRect.left+crownRect.width/2;
     clearTimeout(tabbarVisualTimer);
     tabbar.querySelectorAll('button[data-tab]').forEach(button=>{
       button.classList.remove('visual-active','visual-arriving');
     });
-    curve.getAnimations().forEach(animation=>animation.cancel());
+    crown.getAnimations().forEach(animation=>animation.cancel());
+    notch.getAnimations().forEach(animation=>animation.cancel());
     wash.getAnimations().forEach(animation=>animation.cancel());
-    curve.style.transform='translate3d('+currentX+'px,0,0)';
+    crown.style.transform='translate3d('+(currentCenter-crown.offsetWidth/2)+'px,0,0)';
+    notch.style.transform=tabbarNotchTransform(currentCenter,tabbar);
     if(reduced){
       nextButton.classList.add('visual-active');
       placeTabbarVisual(nextButton);
       return;
     }
-    const destinationX=tabbarCenter(nextButton,tabbar)-curve.offsetWidth/2;
     const destinationCenter=tabbarCenter(nextButton,tabbar);
+    const destinationX=destinationCenter-crown.offsetWidth/2;
     wash.style.left=destinationCenter+'px';
     nextButton.classList.add('visual-arriving');
-    const curveAnimation=curve.animate([
-      {transform:'translate3d('+currentX+'px,0,0)'},
-      {transform:'translate3d('+destinationX+'px,0,0)'}
-    ],{
+    const motionOptions={
       duration:590,
       easing:'cubic-bezier(.65,-.12,.25,1.16)',
       fill:'forwards'
-    });
+    };
+    const crownAnimation=crown.animate([
+      {transform:'translate3d('+(currentCenter-crown.offsetWidth/2)+'px,0,0)'},
+      {transform:'translate3d('+destinationX+'px,0,0)'}
+    ],motionOptions);
+    const notchAnimation=notch.animate([
+      {transform:tabbarNotchTransform(currentCenter,tabbar)},
+      {transform:tabbarNotchTransform(destinationCenter,tabbar)}
+    ],motionOptions);
     wash.animate([
       {opacity:0,transform:'translate(-50%,-50%) scale(.15)',offset:0},
       {opacity:.88,transform:'translate(-50%,-50%) scale(1.06)',offset:.44},
@@ -1670,16 +1706,19 @@
       nextButton.classList.remove('visual-arriving');
       nextButton.classList.add('visual-active');
     },390);
-    curveAnimation.onfinish=()=>{
-      curve.style.transform='translate3d('+destinationX+'px,0,0)';
-      curveAnimation.cancel();
+    crownAnimation.onfinish=()=>{
+      crown.style.transform='translate3d('+destinationX+'px,0,0)';
+      notch.style.transform=tabbarNotchTransform(destinationCenter,tabbar);
+      crownAnimation.cancel();
+      notchAnimation.cancel();
     };
   }
   function syncTabbarVisual(){
     const tabbar=document.querySelector('nav.tabbar');
     if(!tabbar) return;
     const active=tabbar.querySelector('button.visual-active,button.visual-arriving,button.active');
-    tabbar.querySelector('.tabbar-curve').getAnimations().forEach(animation=>animation.cancel());
+    tabbar.querySelector('.tabbar-crown').getAnimations().forEach(animation=>animation.cancel());
+    tabbar.querySelector('.tabbar-notch').getAnimations().forEach(animation=>animation.cancel());
     tabbar.querySelector('.tabbar-wash').getAnimations().forEach(animation=>animation.cancel());
     placeTabbarVisual(active);
   }
