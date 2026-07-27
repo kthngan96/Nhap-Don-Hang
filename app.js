@@ -308,6 +308,7 @@
     const metadata = state.user && state.user.user_metadata || {};
     document.getElementById('accountEmail').textContent = metadata.username || (state.user && state.user.email) || '';
     renderProfile();
+    requestAnimationFrame(syncTabbarVisual);
   }
   function clearAccountState(){
     bootingForUser = null;
@@ -1614,24 +1615,79 @@
   }
 
   // ---------- TABS ----------
-  let tabbarMotionTimer=null;
-  function animateTabbar(previousButton,nextButton){
+  let tabbarVisualTimer=null;
+  function tabbarCenter(button,tabbar){
+    const tabbarRect=tabbar.getBoundingClientRect();
+    const buttonRect=button.getBoundingClientRect();
+    return buttonRect.left-tabbarRect.left+buttonRect.width/2;
+  }
+  function placeTabbarVisual(button){
     const tabbar=document.querySelector('nav.tabbar');
-    const buttons=Array.from(tabbar.querySelectorAll('button[data-tab]'));
-    const previousIndex=buttons.indexOf(previousButton);
-    const nextIndex=buttons.indexOf(nextButton);
-    tabbar.dataset.direction=nextIndex>=previousIndex ? 'forward' : 'backward';
-    tabbar.classList.remove('is-moving');
-    void tabbar.offsetWidth;
-    tabbar.classList.add('is-moving');
-    clearTimeout(tabbarMotionTimer);
-    tabbarMotionTimer=setTimeout(()=>tabbar.classList.remove('is-moving'),620);
+    const curve=tabbar.querySelector('.tabbar-curve');
+    const wash=tabbar.querySelector('.tabbar-wash');
+    if(!button || !tabbar.offsetWidth) return;
+    const center=tabbarCenter(button,tabbar);
+    curve.style.transform='translate3d('+(center-curve.offsetWidth/2)+'px,0,0)';
+    wash.style.left=center+'px';
+  }
+  function animateTabbar(nextButton){
+    const tabbar=document.querySelector('nav.tabbar');
+    const curve=tabbar.querySelector('.tabbar-curve');
+    const wash=tabbar.querySelector('.tabbar-wash');
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tabbarRect=tabbar.getBoundingClientRect();
+    const currentX=curve.getBoundingClientRect().left-tabbarRect.left;
+    clearTimeout(tabbarVisualTimer);
+    tabbar.querySelectorAll('button[data-tab]').forEach(button=>{
+      button.classList.remove('visual-active','visual-arriving');
+    });
+    curve.getAnimations().forEach(animation=>animation.cancel());
+    wash.getAnimations().forEach(animation=>animation.cancel());
+    curve.style.transform='translate3d('+currentX+'px,0,0)';
+    if(reduced){
+      nextButton.classList.add('visual-active');
+      placeTabbarVisual(nextButton);
+      return;
+    }
+    const destinationX=tabbarCenter(nextButton,tabbar)-curve.offsetWidth/2;
+    const destinationCenter=tabbarCenter(nextButton,tabbar);
+    wash.style.left=destinationCenter+'px';
+    nextButton.classList.add('visual-arriving');
+    const curveAnimation=curve.animate([
+      {transform:'translate3d('+currentX+'px,0,0)'},
+      {transform:'translate3d('+destinationX+'px,0,0)'}
+    ],{
+      duration:590,
+      easing:'cubic-bezier(.65,-.12,.25,1.16)',
+      fill:'forwards'
+    });
+    wash.animate([
+      {opacity:0,transform:'translate(-50%,-50%) scale(.15)',offset:0},
+      {opacity:.88,transform:'translate(-50%,-50%) scale(1.06)',offset:.44},
+      {opacity:0,transform:'translate(-50%,-50%) scale(1.32)',offset:1}
+    ],{duration:590,easing:'ease-out'});
+    tabbarVisualTimer=setTimeout(()=>{
+      nextButton.classList.remove('visual-arriving');
+      nextButton.classList.add('visual-active');
+    },390);
+    curveAnimation.onfinish=()=>{
+      curve.style.transform='translate3d('+destinationX+'px,0,0)';
+      curveAnimation.cancel();
+    };
+  }
+  function syncTabbarVisual(){
+    const tabbar=document.querySelector('nav.tabbar');
+    if(!tabbar) return;
+    const active=tabbar.querySelector('button.visual-active,button.visual-arriving,button.active');
+    tabbar.querySelector('.tabbar-curve').getAnimations().forEach(animation=>animation.cancel());
+    tabbar.querySelector('.tabbar-wash').getAnimations().forEach(animation=>animation.cancel());
+    placeTabbarVisual(active);
   }
   function switchTab(name){
     const previousButton=document.querySelector('nav.tabbar button.active');
     const nextButton=document.querySelector('nav.tabbar button[data-tab="'+name+'"]');
     if(!nextButton) return;
-    if(previousButton!==nextButton) animateTabbar(previousButton,nextButton);
+    if(previousButton!==nextButton) animateTabbar(nextButton);
     document.getElementById('app').dataset.activeTab=name;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.getElementById('tab-'+name).classList.add('active');
@@ -1655,6 +1711,8 @@
   document.querySelectorAll('nav.tabbar button').forEach(b=>{
     b.addEventListener('click', ()=>switchTab(b.dataset.tab));
   });
+  window.addEventListener('resize',syncTabbarVisual);
+  if(window.visualViewport) window.visualViewport.addEventListener('resize',syncTabbarVisual);
 
   // ---------- DATE CHANGE ----------
   document.getElementById('dateInput').addEventListener('change', async (e)=>{
