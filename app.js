@@ -183,7 +183,7 @@
     if(hasCaseBreakdown){
       const parts = [];
       if(thung>0) parts.push(thung+' thùng');
-      if(le>0) parts.push(le+' gói lẻ');
+      if(le>0) parts.push(le+' gói');
       return parts.length ? parts.join(' + ') : '0 gói';
     }
     return itemSoldQty(item)+' gói';
@@ -191,7 +191,7 @@
   function formatItemQuantity(item){
     if(!item || (!itemSoldQty(item) && !Number(item.tang||0))) return '';
     let text = formatSoldQuantity(item);
-    if(Number(item.tang||0)>0) text += ' (tặng '+Number(item.tang)+' gói)';
+    if(Number(item.tang||0)>0) text += ' tặng '+Number(item.tang)+' gói';
     return text;
   }
   function showToast(msg){
