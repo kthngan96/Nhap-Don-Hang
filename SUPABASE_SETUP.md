@@ -9,6 +9,11 @@
    và các policy Storage để mỗi người dùng chỉ đọc/ghi
    `{auth.uid()}/avatar.webp`. Phải chạy migration này trước khi triển khai
    frontend có chức năng đổi ảnh đại diện.
+
+   Migration `202607270002_monthly_report_openings.sql` tạo số dư báo cáo theo
+   tháng với RLS và nhập số dư 20–25/07/2026 cho tài khoản Hữu Thi. Migration
+   này phải được áp dụng trước frontend release `20260727.10`; nó không tạo đơn
+   hàng hoặc báo cáo ngày giả.
 2. Trong **Authentication > URL Configuration**:
    - đặt Site URL bằng URL triển khai ứng dụng;
    - thêm URL triển khai và URL localhost vào Redirect URLs.

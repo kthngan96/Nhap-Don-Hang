@@ -108,7 +108,6 @@
   }
   function pad(n){return n<10?'0'+n:''+n;}
   function fmtVND(n){ n = Math.round(n||0); return n.toLocaleString('vi-VN'); }
-  function fmtReportMoney(n){ return Math.round((n||0)/1000).toLocaleString('vi-VN'); }
   function fmtDateVN(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
   function profileInitials(){
     const metadata=state.user && state.user.user_metadata || {};
@@ -818,6 +817,19 @@
       newCustomers:row.new_customers || [],
       dat:Boolean(row.achieved),
       finalizedAt:row.finalized_at
+    };
+  }
+  function rowToReportOpening(row){
+    if(!row) return null;
+    return {
+      monthStart:row.month_start,
+      periodStart:row.period_start,
+      periodEnd:row.period_end,
+      revenue:Number(row.revenue)||0,
+      giaVi:Number(row.gia_vi)||0,
+      asoCount:Number(row.aso_count)||0,
+      sourceOrderCount:Number(row.source_order_count)||0,
+      sourceDayASO:Number(row.source_day_aso)||0
     };
   }
   async function loadSettings(){
@@ -1664,15 +1676,25 @@
     });
   }
 
-  async function getMonthReports(mKey){
+  async function getMonthReports(mKey,throughDate){
     const [year,month]=mKey.split('-').map(Number);
     const nextMonth = month===12 ? (year+1)+'-01-01' : year+'-'+pad(month+1)+'-01';
-    const {data,error}=await client.from('daily_reports').select('*')
+    let query=client.from('daily_reports').select('*')
       .eq('user_id',state.user.id)
       .gte('work_date',mKey+'-01').lt('work_date',nextMonth)
       .order('work_date',{ascending:true});
+    if(throughDate) query=query.lte('work_date',throughDate);
+    const {data,error}=await query;
     throwQueryError(error,'Không thể tải lịch sử báo cáo.');
     return (data||[]).map(rowToReport);
+  }
+  async function getMonthReportOpening(mKey){
+    const {data,error}=await client.from('monthly_report_openings').select('*')
+      .eq('user_id',state.user.id)
+      .eq('month_start',mKey+'-01')
+      .maybeSingle();
+    throwQueryError(error,'Không thể tải số dư báo cáo.');
+    return rowToReportOpening(data);
   }
 
   async function renderReportTab(){
@@ -1684,7 +1706,10 @@
     document.getElementById('reportGiaVi').textContent=fmtVND(currentGiaVi)+' đ';
     document.getElementById('reportAverage').textContent=fmtVND(state.orders.length?currentRevenue/state.orders.length:0)+' đ';
     const mKey = monthKey(state.date);
-    const reports = await getMonthReports(mKey);
+    const [reports,opening] = await Promise.all([
+      getMonthReports(mKey,state.date),
+      getMonthReportOpening(mKey)
+    ]);
     const todayReport = reports.find(r=>r.date===state.date);
 
     // Lịch sử
@@ -1709,39 +1734,39 @@
     }
     reportCard.style.display='';
 
-    let cdRevenue=0, cdGiaVi=0, daysAchieved=0;
+    const openingApplies=Boolean(opening && state.date>opening.periodEnd);
+    let cdRevenue=openingApplies ? opening.revenue : 0;
+    let cdGiaVi=openingApplies ? opening.giaVi : 0;
     const phoneSet = new Set();
     reports.forEach(r=>{
       cdRevenue += r.revenue;
       cdGiaVi += r.giaVi;
-      if(r.dat) daysAchieved++;
       (r.newCustomers||[]).forEach(c=>{
         const key = (c.phone||c.name||'').trim().toLowerCase();
         if(key) phoneSet.add(key);
       });
     });
-    const daysReported = reports.length;
+    const monthASO=(openingApplies ? opening.asoCount : 0)+phoneSet.size;
     const s = state.settings;
 
     const pctNgay   = safeDiv(todayReport.revenue, s.targetDaily);
     const pctThang  = safeDiv(cdRevenue, s.targetMonthly);
-    const pctASO    = safeDiv(phoneSet.size, s.targetASO);
+    const pctASO    = safeDiv(monthASO, s.targetASO);
     const pctGiaVi  = safeDiv(cdGiaVi, s.targetGiaVi);
-    const pctTienDo = safeDiv(daysReported, s.workDays);
 
     const text =
 `Báo cáo ngày : ${fmtDateVN(state.date)}
 - Npp: ${s.npp}
 - NVBH: ${s.nvbh}
-- Tiến độ thời gian: ${daysReported}/${s.workDays} ngày (${pctTienDo.toFixed(0)}%)
-1. Doanh số thực hiện (ĐVT: 000đ)
-- TH/CT ngày: ${fmtReportMoney(todayReport.revenue)}/${fmtReportMoney(s.targetDaily)}/${pctNgay.toFixed(1)}%
-- CD/CT tháng: ${fmtReportMoney(cdRevenue)}/${fmtReportMoney(s.targetMonthly)}/${pctThang.toFixed(1)}%
+- Tiến độ thời gian:
+1. Doanh số thực hiện (ĐVT: đ)
+- TH/CT ngày: ${fmtVND(todayReport.revenue)}/${fmtVND(s.targetDaily)}/${pctNgay.toFixed(1)}%
+- CD/CT tháng: ${fmtVND(cdRevenue)}/${fmtVND(s.targetMonthly)}/${pctThang.toFixed(0)}%
 2. Đơn hàng thành công: ${todayReport.orderCount}đh
 3. KPI
-- KPI 1 - ASO : ${todayReport.newCustomers.length}/${phoneSet.size}/${s.targetASO}/${pctASO.toFixed(0)}%
-- KPI 2 - CT ngày: ${daysAchieved}/${daysReported} ngày đạt
-- KPI 3 - Gia vị: ${fmtReportMoney(todayReport.giaVi)}/${fmtReportMoney(cdGiaVi)}/${fmtReportMoney(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
+- KPI 1 - ASO : ${todayReport.newCustomers.length}/${monthASO}/${s.targetASO}/${pctASO.toFixed(0)}%
+- KPI 2 - CT ngày: Số ngày đạt
+- KPI 3 - Gia vị: ${fmtVND(todayReport.giaVi)}/${fmtVND(cdGiaVi)}/${fmtVND(s.targetGiaVi)}/${pctGiaVi.toFixed(1)}%`;
 
     document.getElementById('reportText').textContent = text;
   }
