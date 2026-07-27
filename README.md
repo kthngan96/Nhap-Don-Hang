@@ -33,6 +33,12 @@ python -m http.server 3000
 
 Sau đó truy cập `http://localhost:3000`.
 
+## Triển khai frontend
+
+Wasmer lưu cache dài hạn cho CSS và JavaScript. Khi phát hành thay đổi giao diện hoặc
+nghiệp vụ frontend, hãy tăng release token `?v=...` của `styles.css` và `app.js` trong
+`index.html` để trình duyệt tải đúng phiên bản mới.
+
 ## Cấu hình backend
 
 Xem [SUPABASE_SETUP.md](SUPABASE_SETUP.md) để chạy migration, tạo tài khoản,
