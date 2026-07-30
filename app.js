@@ -2068,6 +2068,12 @@
   function applyExcelBorder(row,fromColumn,toColumn){
     for(let column=fromColumn;column<=toColumn;column++) row.getCell(column).border=excelCellBorder();
   }
+  function applyExcelMiddleAlign(row,fromColumn,toColumn){
+    for(let column=fromColumn;column<=toColumn;column++){
+      const cell=row.getCell(column);
+      cell.alignment=Object.assign({},cell.alignment,{vertical:'middle'});
+    }
+  }
   function buildOrdersExcelWorkbook(rows,dateFrom,dateTo){
     if(!window.ExcelJS) throw new Error('Thư viện tạo Excel chưa sẵn sàng. Vui lòng kiểm tra kết nối Internet và thử lại.');
     const workbook=new ExcelJS.Workbook();
@@ -2106,6 +2112,8 @@
     subTitle.font={name:'Arial',size:10,bold:true,color:{argb:'FF4B3228'}};
     subTitle.alignment={horizontal:'center',vertical:'middle'};
     sheet.getRow(2).height=20;
+    applyExcelMiddleAlign(sheet.getRow(1),1,lastColumn);
+    applyExcelMiddleAlign(sheet.getRow(2),1,lastColumn);
     sheet.mergeCells(3,firstProductColumn,3,miEndColumn);
     sheet.getCell(3,firstProductColumn).value='THUẦN VIỆT FOODY';
     sheet.mergeCells(3,miEndColumn+1,3,lastProductColumn);
@@ -2136,6 +2144,8 @@
     }
     sheet.getRow(3).height=22;
     sheet.getRow(4).height=42;
+    applyExcelMiddleAlign(sheet.getRow(3),1,lastColumn);
+    applyExcelMiddleAlign(sheet.getRow(4),1,lastColumn);
     sheet.columns=[{width:7},{width:17},{width:22},{width:25},{width:40},{width:16},...PRODUCTS.map(()=>({width:12})),{width:16},{width:13}];
     const productTotals=Object.fromEntries(PRODUCTS.map(product=>[product.id,0]));
     let revenueTotal=0;
@@ -2153,6 +2163,7 @@
       excelRow.font={name:'Arial',size:9,color:{argb:'FF28211E'}};
       excelRow.alignment={vertical:'center'};
       applyExcelBorder(excelRow,1,lastColumn);
+      applyExcelMiddleAlign(excelRow,1,lastColumn);
       [1,2,3,6,dateColumn].forEach(column=>{ excelRow.getCell(column).alignment={horizontal:'center',vertical:'center',wrapText:true}; });
       [4,5].forEach(column=>{ excelRow.getCell(column).alignment={horizontal:'left',vertical:'center',wrapText:true}; });
       for(let column=firstProductColumn;column<=lastProductColumn;column++) excelRow.getCell(column).alignment={horizontal:'center',vertical:'center'};
@@ -2167,6 +2178,7 @@
     totalRow.font={name:'Arial',size:10,bold:true,color:{argb:'FF5B3A13'}};
     totalRow.fill={type:'pattern',pattern:'solid',fgColor:{argb:totalFill}};
     applyExcelBorder(totalRow,1,lastColumn);
+    applyExcelMiddleAlign(totalRow,1,lastColumn);
     totalRow.getCell(1).alignment={horizontal:'center',vertical:'center'};
     totalRow.getCell(4).alignment={horizontal:'left',vertical:'center'};
     for(let column=firstProductColumn;column<=lastProductColumn;column++) totalRow.getCell(column).alignment={horizontal:'center',vertical:'center'};
