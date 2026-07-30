@@ -87,6 +87,7 @@
       dateFrom:'',
       dateTo:'',
       loading:false,
+      exporting:false,
       requestId:0
     };
   }
@@ -1978,6 +1979,15 @@
     document.getElementById('reportDateToDisplay').textContent=overview.dateTo
       ? fmtDateVN(overview.dateTo)
       : '--/--/----';
+    const exportButton=document.getElementById('btnExportExcel');
+    if(exportButton){
+      const validRange=Boolean(overview.dateFrom && overview.dateTo && overview.dateFrom<=overview.dateTo);
+      exportButton.disabled=!validRange || overview.exporting;
+      exportButton.setAttribute('aria-busy',String(overview.exporting));
+      exportButton.innerHTML=overview.exporting
+        ? '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg> Đang tạo Excel…'
+        : '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Xuất Excel';
+    }
   }
   function setReportOverviewValues(orderCount,revenue,giaVi){
     const hasValues=orderCount!==null;
@@ -2015,6 +2025,204 @@
     }
     return rows;
   }
+  async function getOrdersForExcelExport(dateFrom,dateTo,userId){
+    const pageSize=1000;
+    const rows=[];
+    let offset=0;
+    while(true){
+      const {data,error}=await client.from('orders')
+        .select('id,work_date,customer_name,address,phone,items,created_at')
+        .eq('user_id',userId)
+        .gte('work_date',dateFrom)
+        .lte('work_date',dateTo)
+        .order('work_date',{ascending:true})
+        .order('created_at',{ascending:true})
+        .order('id',{ascending:true})
+        .range(offset,offset+pageSize-1);
+      throwQueryError(error,'Không thể tải đơn hàng để xuất Excel.');
+      const page=data||[];
+      rows.push(...page);
+      if(page.length<pageSize) break;
+      offset+=pageSize;
+    }
+    return rows;
+  }
+  function excelColumnName(index){
+    let value=index;
+    let name='';
+    while(value>0){
+      const remainder=(value-1)%26;
+      name=String.fromCharCode(65+remainder)+name;
+      value=Math.floor((value-1)/26);
+    }
+    return name;
+  }
+  function excelCellBorder(){
+    return {
+      top:{style:'thin',color:{argb:'FFB7AFA6'}},
+      left:{style:'thin',color:{argb:'FFB7AFA6'}},
+      bottom:{style:'thin',color:{argb:'FFB7AFA6'}},
+      right:{style:'thin',color:{argb:'FFB7AFA6'}}
+    };
+  }
+  function applyExcelBorder(row,fromColumn,toColumn){
+    for(let column=fromColumn;column<=toColumn;column++) row.getCell(column).border=excelCellBorder();
+  }
+  function buildOrdersExcelWorkbook(rows,dateFrom,dateTo){
+    if(!window.ExcelJS) throw new Error('Thư viện tạo Excel chưa sẵn sàng. Vui lòng kiểm tra kết nối Internet và thử lại.');
+    const workbook=new ExcelJS.Workbook();
+    workbook.creator='Nhập Đơn Hàng';
+    workbook.created=new Date();
+    workbook.modified=new Date();
+    workbook.subject='Báo cáo đơn hàng';
+    workbook.title='Báo cáo đơn hàng';
+    const sheet=workbook.addWorksheet('Báo cáo đơn hàng',{
+      views:[{state:'frozen',ySplit:5,showGridLines:false}],
+      pageSetup:{orientation:'landscape',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.2,right:.2,top:.45,bottom:.45,header:.2,footer:.2}}
+    });
+    const firstProductColumn=7;
+    const lastProductColumn=firstProductColumn+PRODUCTS.length-1;
+    const totalColumn=lastProductColumn+1;
+    const dateColumn=totalColumn+1;
+    const lastColumn=dateColumn;
+    const lastColumnName=excelColumnName(lastColumn);
+    const miEndColumn=firstProductColumn+PRODUCTS.filter(product=>product.cat==='mi').length-1;
+    const rangeLabel=dateFrom===dateTo ? fmtDateVN(dateFrom) : fmtDateVN(dateFrom)+' – '+fmtDateVN(dateTo);
+    const titleFill='FF7A1F24';
+    const miFill='FFF6E5DD';
+    const giaViFill='FFE1F0E2';
+    const headerFill='FFF2E7DF';
+    const totalFill='FFFFF3D4';
+    sheet.mergeCells(1,1,1,lastColumn);
+    const titleCell=sheet.getCell('A1');
+    titleCell.value=(state.settings.npp || 'THUẦN VIỆT FOODY').toUpperCase()+' – BÁO CÁO ĐƠN HÀNG';
+    titleCell.font={name:'Arial',size:15,bold:true,color:{argb:'FFFFFFFF'}};
+    titleCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:titleFill}};
+    titleCell.alignment={horizontal:'center',vertical:'middle'};
+    sheet.getRow(1).height=28;
+    sheet.mergeCells(2,1,2,lastColumn);
+    const subTitle=sheet.getCell('A2');
+    subTitle.value='NVBH: '+(state.settings.nvbh || '—')+'  |  Thời gian: '+rangeLabel+'  |  Đơn vị: Gói';
+    subTitle.font={name:'Arial',size:10,bold:true,color:{argb:'FF4B3228'}};
+    subTitle.alignment={horizontal:'center',vertical:'middle'};
+    sheet.getRow(2).height=20;
+    sheet.mergeCells(3,firstProductColumn,3,miEndColumn);
+    sheet.getCell(3,firstProductColumn).value='THUẦN VIỆT FOODY';
+    sheet.mergeCells(3,miEndColumn+1,3,lastProductColumn);
+    sheet.getCell(3,miEndColumn+1).value='THUẦN VIỆT FOODY GIA VỊ';
+    [1,2,3,4,5,6,totalColumn,dateColumn].forEach(column=>sheet.mergeCells(3,column,4,column));
+    ['STT','NPP','NVBH','TÊN ĐIỂM BÁN','ĐỊA CHỈ','SỐ ĐIỆN THOẠI'].forEach((header,index)=>{ sheet.getCell(3,index+1).value=header; });
+    sheet.getCell(3,totalColumn).value='TỔNG TIỀN';
+    sheet.getCell(3,dateColumn).value='NGÀY';
+    PRODUCTS.forEach((product,index)=>{ sheet.getCell(4,firstProductColumn+index).value=product.name; });
+    for(let column=1;column<=lastColumn;column++){
+      const cell=sheet.getCell(3,column);
+      cell.font={name:'Arial',size:9,bold:true,color:{argb:'FF3F2A22'}};
+      cell.alignment={horizontal:'center',vertical:'center',wrapText:true};
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:headerFill}};
+      cell.border=excelCellBorder();
+      const productHeader=sheet.getCell(4,column);
+      productHeader.font={name:'Arial',size:8.5,bold:true,color:{argb:'FF3F2A22'}};
+      productHeader.alignment={horizontal:'center',vertical:'center',wrapText:true};
+      productHeader.border=excelCellBorder();
+    }
+    for(let column=firstProductColumn;column<=miEndColumn;column++){
+      sheet.getCell(3,column).fill={type:'pattern',pattern:'solid',fgColor:{argb:miFill}};
+      sheet.getCell(4,column).fill={type:'pattern',pattern:'solid',fgColor:{argb:miFill}};
+    }
+    for(let column=miEndColumn+1;column<=lastProductColumn;column++){
+      sheet.getCell(3,column).fill={type:'pattern',pattern:'solid',fgColor:{argb:giaViFill}};
+      sheet.getCell(4,column).fill={type:'pattern',pattern:'solid',fgColor:{argb:giaViFill}};
+    }
+    sheet.getRow(3).height=22;
+    sheet.getRow(4).height=42;
+    sheet.columns=[{width:7},{width:17},{width:22},{width:25},{width:40},{width:16},...PRODUCTS.map(()=>({width:12})),{width:16},{width:13}];
+    const productTotals=Object.fromEntries(PRODUCTS.map(product=>[product.id,0]));
+    let revenueTotal=0;
+    rows.forEach((row,index)=>{
+      const order=rowToOrder(row,index);
+      const revenue=orderRevenue(order);
+      revenueTotal+=revenue;
+      const quantities=PRODUCTS.map(product=>{
+        const quantity=itemSoldQty(order.items[product.id]);
+        productTotals[product.id]+=quantity;
+        return quantity || null;
+      });
+      const excelRow=sheet.addRow([index+1,state.settings.npp || '',state.settings.nvbh || '',order.kh || '',order.diaChi || '',order.sdt || '',...quantities,revenue,parseISODate(order.workDate) || order.workDate]);
+      excelRow.height=30;
+      excelRow.font={name:'Arial',size:9,color:{argb:'FF28211E'}};
+      excelRow.alignment={vertical:'center'};
+      applyExcelBorder(excelRow,1,lastColumn);
+      [1,2,3,6,dateColumn].forEach(column=>{ excelRow.getCell(column).alignment={horizontal:'center',vertical:'center',wrapText:true}; });
+      [4,5].forEach(column=>{ excelRow.getCell(column).alignment={horizontal:'left',vertical:'center',wrapText:true}; });
+      for(let column=firstProductColumn;column<=lastProductColumn;column++) excelRow.getCell(column).alignment={horizontal:'center',vertical:'center'};
+      excelRow.getCell(totalColumn).alignment={horizontal:'right',vertical:'center'};
+      excelRow.getCell(totalColumn).numFmt='#,##0 "đ"';
+      excelRow.getCell(dateColumn).numFmt='dd/mm/yyyy';
+    });
+    const totalRow=sheet.addRow(['TỔNG',null,null,'Tổng '+rows.length+' đơn',null,null,...PRODUCTS.map(product=>productTotals[product.id] || null),revenueTotal,null]);
+    sheet.mergeCells(totalRow.number,1,totalRow.number,3);
+    sheet.mergeCells(totalRow.number,4,totalRow.number,6);
+    totalRow.height=24;
+    totalRow.font={name:'Arial',size:10,bold:true,color:{argb:'FF5B3A13'}};
+    totalRow.fill={type:'pattern',pattern:'solid',fgColor:{argb:totalFill}};
+    applyExcelBorder(totalRow,1,lastColumn);
+    totalRow.getCell(1).alignment={horizontal:'center',vertical:'center'};
+    totalRow.getCell(4).alignment={horizontal:'left',vertical:'center'};
+    for(let column=firstProductColumn;column<=lastProductColumn;column++) totalRow.getCell(column).alignment={horizontal:'center',vertical:'center'};
+    totalRow.getCell(totalColumn).alignment={horizontal:'right',vertical:'center'};
+    totalRow.getCell(totalColumn).numFmt='#,##0 "đ"';
+    sheet.autoFilter={from:{row:4,column:1},to:{row:Math.max(4,totalRow.number-1),column:lastColumn}};
+    sheet.pageSetup.printArea='A1:'+lastColumnName+totalRow.number;
+    sheet.headerFooter.oddFooter='Trang &P / &N';
+    return workbook;
+  }
+  async function exportOrdersExcel(){
+    if(!state.user) return;
+    initializeReportOverview();
+    const overview=state.reportOverview;
+    const dateFrom=overview.dateFrom;
+    const dateTo=overview.dateTo;
+    if(!dateFrom || !dateTo || dateFrom>dateTo){
+      setReportOverviewStatus('Khoảng ngày không hợp lệ: Từ ngày phải trước hoặc bằng Đến ngày.',true);
+      syncReportOverviewControls();
+      return;
+    }
+    if(!navigator.onLine){
+      setReportOverviewStatus('Không thể xuất Excel khi đang ngoại tuyến.',true);
+      return;
+    }
+    if(overview.exporting) return;
+    overview.exporting=true;
+    syncReportOverviewControls();
+    setReportOverviewStatus('Đang tạo file Excel…',false);
+    try{
+      const rows=await getOrdersForExcelExport(dateFrom,dateTo,state.user.id);
+      if(!rows.length){
+        setReportOverviewStatus('Không có đơn hàng trong khoảng ngày đã chọn để xuất Excel.',true);
+        return;
+      }
+      const workbook=buildOrdersExcelWorkbook(rows,dateFrom,dateTo);
+      const buffer=await workbook.xlsx.writeBuffer();
+      const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download='Bao-cao-don-hang_'+dateFrom+'_'+dateTo+'.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),0);
+      setReportOverviewStatus('Đã xuất '+rows.length+' đơn hàng ra file Excel.',false);
+    }catch(error){
+      console.error(error);
+      setReportOverviewStatus(error.message || 'Không thể tạo file Excel.',true);
+    }finally{
+      overview.exporting=false;
+      syncReportOverviewControls();
+    }
+  }
+
   async function renderReportOverview(){
     if(!state.user) return;
     initializeReportOverview();
@@ -2623,6 +2831,7 @@
   document.getElementById('btnAddOrder').addEventListener('click',submitOrderForm);
   document.getElementById('btnCancelOrderEdit').addEventListener('click',cancelOrderEdit);
   document.getElementById('btnFinalize').addEventListener('click', finalizeDay);
+  document.getElementById('btnExportExcel').addEventListener('click',exportOrdersExcel);
   document.getElementById('btnSaveSettings').addEventListener('click', saveSettingsForm);
   document.getElementById('btnRetryOnline').addEventListener('click',async ()=>{
     syncOnlineState();
