@@ -157,8 +157,26 @@
   .report-overview-range .field{min-width:0;margin-bottom:0;}
   .report-overview-hint{margin:8px 0 0;color:var(--ink-soft);font-size:10.5px;line-height:1.45;}
   .report-export-actions{margin-top:10px;}
-  .btn-export-excel{width:100%;padding:9px 12px;font-size:13px;}
-  .btn-export-excel:disabled{opacity:.55;cursor:not-allowed;}
+  .btn-export-excel{
+    position:relative;isolation:isolate;overflow:hidden;width:100%;padding:9px 12px;font-size:13px;
+    color:#FFF9F0;border-color:#2F7D4B;background:linear-gradient(135deg,#287A48,#3F9A5E);
+    box-shadow:0 4px 10px rgba(35,112,66,.2);transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+  }
+  .btn-export-excel::before{
+    content:'';position:absolute;z-index:-1;inset:0;transform:translateX(-115%);
+    background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.34) 49%,transparent 68%);
+  }
+  .btn-export-excel .ui-icon{width:17px;height:17px;transition:transform .22s ease;}
+  .btn-export-excel:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.04);box-shadow:0 7px 16px rgba(35,112,66,.28);}
+  .btn-export-excel:not(:disabled):hover::before{animation:excel-button-shine .7s ease;}
+  .btn-export-excel:not(:disabled):hover .ui-icon{transform:translateY(2px);}
+  .btn-export-excel:not(:disabled):active{transform:translateY(0) scale(.98);box-shadow:0 2px 6px rgba(35,112,66,.2);}
+  .btn-export-excel[aria-busy="true"]{cursor:wait;background:linear-gradient(135deg,#2B6840,#397A4D);animation:excel-button-pulse 1.15s ease-in-out infinite;}
+  .btn-export-excel[aria-busy="true"] .ui-icon{animation:excel-button-spin .9s linear infinite;}
+  .btn-export-excel:disabled:not([aria-busy="true"]){opacity:.55;cursor:not-allowed;box-shadow:none;}
+  @keyframes excel-button-shine{to{transform:translateX(115%);}}
+  @keyframes excel-button-pulse{50%{box-shadow:0 0 0 5px rgba(63,154,94,.16),0 5px 14px rgba(35,112,66,.24);}}
+  @keyframes excel-button-spin{to{transform:rotate(360deg);}}
   .report-overview-status{min-height:17px;margin-top:7px;color:var(--ink-soft);font-size:10.5px;line-height:1.45;}
   .report-overview-status.error{color:var(--red);}
   .report-summary{transition:opacity .15s ease;}
@@ -472,7 +490,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     .tab,.location-btn,.tabbar-crown,.tabbar-notch,.tabbar-wash,nav.tabbar button .ui-icon,
-    nav.tabbar button > span,.work-context{animation:none!important;transition:none!important;}
+    nav.tabbar button > span,.work-context,.btn-export-excel,.btn-export-excel::before,.btn-export-excel .ui-icon{animation:none!important;transition:none!important;}
   }
 
   /* 2026 visual refresh — warm utility design system */
