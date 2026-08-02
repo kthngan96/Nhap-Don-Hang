@@ -2434,7 +2434,7 @@
 - Npp: ${s.npp}
 - NVBH: ${s.nvbh}
 - Tiến độ thời gian:
-1. Doanh số thực hiện (ĐVT: đ)
+1. Doanh số thực hiện (ĐVT: 1000đ)
 - TH/CT ngày: ${fmtVND(todayReport.revenue)}/${fmtVND(s.targetDaily)}/${pctNgay.toFixed(1)}%
 - CD/CT tháng: ${fmtVND(cdRevenue)}/${fmtVND(s.targetMonthly)}/${pctThang.toFixed(0)}%
 2. Đơn hàng thành công: ${todayReport.orderCount}đh
