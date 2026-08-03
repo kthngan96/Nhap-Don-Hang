@@ -41,7 +41,7 @@
     nvbh:'Hữu Thi',
     avatarPath:null,
     targetDaily:3426000,
-    targetMonthly:90000000,
+    targetMonthly:75000000,
     targetASO:50,
     targetGiaVi:20000000,
     workDays:26,
@@ -117,6 +117,7 @@
     avatarBusy: false,
     history:createHistoryState(),
     reportOverview:createReportOverviewState(),
+    payroll:{requestId:0,summary:null},
     datePicker:createDatePickerState()
   };
 
@@ -670,6 +671,7 @@
     state.orderDraftBeforeEdit = null;
     state.history = createHistoryState();
     state.reportOverview = createReportOverviewState();
+    state.payroll = {requestId:0,summary:null};
     state.datePicker = createDatePickerState();
     resetOrderForm();
     syncOrderFormMode();
@@ -2348,7 +2350,198 @@
     overview.requestId++;
     if(document.getElementById('tab-report').classList.contains('active')){
       renderReportOverview();
+      if(monthKey(date)===monthKey(state.date)) loadPayrollSummary();
     }
+  }
+
+  // ---------- MONTHLY PAYROLL ----------
+  const PAYROLL_BASE_SALARY = 5500000;
+  const PAYROLL_STANDARD_DAYS = 26;
+  function getPayrollPeriod(date){
+    const monthStart=monthKey(date)+'-01';
+    return {monthStart,throughDate:date,label:fmtDateVN(monthStart)+' – '+fmtDateVN(date)};
+  }
+  async function getPayrollAttendance(monthStart){
+    const {data,error}=await client.from('monthly_payroll_inputs').select('attendance_days')
+      .eq('user_id',state.user.id).eq('month_start',monthStart).maybeSingle();
+    throwQueryError(error,'Không thể tải ngày công được duyệt.');
+    return data ? Number(data.attendance_days)||0 : 0;
+  }
+  async function getMonthlyPayrollData(monthStart,throughDate){
+    const {data,error}=await client.from('daily_reports').select('*')
+      .eq('user_id',state.user.id).gte('work_date',monthStart).lte('work_date',throughDate)
+      .order('work_date',{ascending:true});
+    throwQueryError(error,'Không thể tải dữ liệu lương tháng.');
+    return (data||[]).map(rowToReport);
+  }
+  function getSalesTier(salesRate){
+    if(salesRate>100) return {name:'Trên 100%',allowance:2000000,bonus:2500000};
+    if(salesRate>=100) return {name:'Đạt 100%',allowance:2000000,bonus:2500000};
+    if(salesRate>90) return {name:'Trên 90% đến dưới 100%',allowance:1500000,bonus:1700000};
+    if(salesRate>80) return {name:'Trên 80% đến 90%',allowance:1500000,bonus:1500000};
+    if(salesRate>70) return {name:'Trên 70% đến 80%',allowance:1000000,bonus:1200000};
+    if(salesRate>50) return {name:'Trên 50% đến 70%',allowance:1000000,bonus:0};
+    if(salesRate>35) return {name:'Trên 35% đến 50%',allowance:0,bonus:0};
+    return {name:'Từ 35% trở xuống',allowance:0,bonus:0};
+  }
+  function computeSalesCompensation(revenue,target,attendanceDays){
+    const salesRate=safeDiv(revenue,target);
+    const tier=getSalesTier(salesRate);
+    return {
+      salesRate,tier,
+      baseSalary:PAYROLL_BASE_SALARY*Math.min(Math.max(attendanceDays,0),PAYROLL_STANDARD_DAYS)/PAYROLL_STANDARD_DAYS,
+      allowance:tier.allowance,
+      salesBonus:tier.bonus,
+      overTargetBonus:target>0 && revenue>target ? (revenue-target)*.02 : 0
+    };
+  }
+  function computeKpiBonuses(reports,revenue,target,attendanceDays){
+    const salesRate=safeDiv(revenue,target);
+    const uniqueCustomers=new Set();
+    let giaVi=0;
+    reports.forEach(report=>{
+      giaVi+=report.giaVi;
+      (report.newCustomers||[]).forEach(customer=>{
+        const key=(customer.phone||customer.name||'').trim().toLowerCase();
+        if(key) uniqueCustomers.add(key);
+      });
+    });
+    const dailyTarget=target/PAYROLL_STANDARD_DAYS;
+    const achievedDays=dailyTarget>0 ? reports.filter(report=>report.revenue>=dailyTarget).length : 0;
+    const asoTarget=Number(state.settings.targetASO)||50;
+    const giaViTarget=Number(state.settings.targetGiaVi)||0;
+    const giaViRate=safeDiv(giaVi,giaViTarget);
+    return {
+      asoCount:uniqueCustomers.size,asoTarget,
+      dailyTarget,achievedDays,
+      giaVi,giaViTarget,giaViRate,
+      asoBonus:salesRate>35 && uniqueCustomers.size>=asoTarget ? 1200000 : 0,
+      dailyBonus:salesRate>50 ? 1200000*achievedDays/PAYROLL_STANDARD_DAYS : 0,
+      giaViBonus:giaViRate>=90 ? 2000000 : giaViRate>=80 ? 1500000 : giaViRate>=70 ? 1000000 : 0,
+      attendanceBonus:attendanceDays>=PAYROLL_STANDARD_DAYS && salesRate>35 ? 500000 : 0
+    };
+  }
+  function computePayrollSummary(period,reports,attendanceDays){
+    const revenue=reports.reduce((sum,report)=>sum+report.revenue,0);
+    const target=Number(state.settings.targetMonthly)||0;
+    const compensation=computeSalesCompensation(revenue,target,attendanceDays);
+    const kpi=computeKpiBonuses(reports,revenue,target,attendanceDays);
+    const total=compensation.baseSalary+compensation.allowance+compensation.salesBonus+
+      compensation.overTargetBonus+kpi.asoBonus+kpi.dailyBonus+kpi.giaViBonus+kpi.attendanceBonus;
+    return Object.assign({period,reports,attendanceDays,revenue,target,total},compensation,kpi);
+  }
+  function payrollRows(summary){
+    const days=fmtVND(summary.attendanceDays);
+    return [
+      ['Lương cơ bản','5.500.000đ × '+days+' / '+PAYROLL_STANDARD_DAYS+' ngày',summary.baseSalary],
+      ['Phụ cấp doanh số',summary.tier.name,summary.allowance],
+      ['Thưởng doanh số',summary.tier.name,summary.salesBonus],
+      ['Thưởng vượt target',summary.revenue>summary.target ? '2% phần doanh số vượt target' : 'Chưa vượt target',summary.overTargetBonus],
+      ['Thưởng ASO',summary.asoCount+'/'+summary.asoTarget+' ASO, doanh số >35%',summary.asoBonus],
+      ['Thưởng chỉ tiêu ngày',summary.achievedDays+'/'+PAYROLL_STANDARD_DAYS+' ngày, doanh số >50%',summary.dailyBonus],
+      ['Thưởng Gia Vị',fmtVND(summary.giaVi)+'đ / '+fmtVND(summary.giaViTarget)+'đ ('+summary.giaViRate.toFixed(1)+'%)',summary.giaViBonus],
+      ['Thưởng chuyên cần',summary.attendanceDays>=PAYROLL_STANDARD_DAYS && summary.salesRate>35 ? 'Đủ 26 ngày công, doanh số >35%' : 'Cần đủ 26 ngày công và doanh số >35%',summary.attendanceBonus]
+    ];
+  }
+  function setPayrollStatus(message,isError){
+    const element=document.getElementById('payrollStatus');
+    element.textContent=message||'';
+    element.classList.toggle('error',Boolean(isError));
+  }
+  function clearPayrollSummary(){
+    ['payrollRevenue','payrollTarget','payrollSalesRate','payrollDailyAchievement','payrollTotal'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('payrollBreakdown').innerHTML='';
+  }
+  function renderPayrollSummary(summary){
+    state.payroll.summary=summary;
+    document.getElementById('payrollPeriod').textContent='Kỳ tính: '+summary.period.label;
+    document.getElementById('payrollAttendanceDays').value=summary.attendanceDays;
+    document.getElementById('payrollRevenue').textContent=fmtVND(summary.revenue)+' đ';
+    document.getElementById('payrollTarget').textContent=fmtVND(summary.target)+' đ';
+    document.getElementById('payrollSalesRate').textContent=summary.salesRate.toFixed(1)+'%';
+    document.getElementById('payrollDailyAchievement').textContent=summary.achievedDays+'/'+PAYROLL_STANDARD_DAYS;
+    document.getElementById('payrollBreakdown').innerHTML=payrollRows(summary).map(row=>
+      '<tr><td>'+esc(row[0])+'</td><td>'+esc(row[1])+'</td><td class="num">'+fmtVND(row[2])+' đ</td></tr>'
+    ).join('');
+    document.getElementById('payrollTotal').textContent=fmtVND(summary.total)+' đ';
+    setPayrollStatus('Tạm tính theo báo cáo đã chốt trong kỳ.',false);
+  }
+  async function loadPayrollSummary(){
+    if(!state.user) return;
+    const payroll=state.payroll;
+    const requestId=++payroll.requestId;
+    const period=getPayrollPeriod(state.date);
+    document.getElementById('payrollCard').setAttribute('aria-busy','true');
+    document.getElementById('payrollPeriod').textContent='Kỳ tính: '+period.label;
+    clearPayrollSummary();
+    setPayrollStatus('Đang tải dữ liệu lương…',false);
+    try{
+      const [reports,attendanceDays]=await Promise.all([
+        getMonthlyPayrollData(period.monthStart,period.throughDate),
+        getPayrollAttendance(period.monthStart)
+      ]);
+      if(requestId!==payroll.requestId) return;
+      renderPayrollSummary(computePayrollSummary(period,reports,attendanceDays));
+    }catch(error){
+      if(requestId!==payroll.requestId) return;
+      payroll.summary=null;
+      clearPayrollSummary();
+      setPayrollStatus(error.message||'Không thể tải tạm tính lương.',true);
+    }finally{
+      if(requestId===payroll.requestId) document.getElementById('payrollCard').setAttribute('aria-busy','false');
+    }
+  }
+  async function savePayrollAttendance(){
+    if(!requireOnline()) return;
+    const value=Number(document.getElementById('payrollAttendanceDays').value);
+    if(!Number.isFinite(value) || value<0 || value>PAYROLL_STANDARD_DAYS){
+      setPayrollStatus('Ngày công phải nằm trong khoảng 0–26.',true);
+      return;
+    }
+    const period=getPayrollPeriod(state.date);
+    await runButtonAction(document.getElementById('btnSavePayrollAttendance'),'Đang lưu…',async ()=>{
+      const {error}=await client.from('monthly_payroll_inputs').upsert({
+        user_id:state.user.id,month_start:period.monthStart,attendance_days:value
+      },{onConflict:'user_id,month_start'});
+      if(error){ setPayrollStatus(dbError(error,'Không thể lưu ngày công.').message,true); return; }
+      await loadPayrollSummary();
+      showToast('Đã lưu ngày công tháng');
+    });
+  }
+  function buildPayrollExcelWorkbook(summary){
+    if(!window.ExcelJS) throw new Error('Thư viện tạo Excel chưa sẵn sàng.');
+    const workbook=new ExcelJS.Workbook();
+    workbook.creator='Nhập Đơn Hàng'; workbook.title='Phiếu lương tháng'; workbook.subject='Tạm tính lương';
+    const sheet=workbook.addWorksheet('Phiếu lương tháng',{
+      views:[{showGridLines:false}],pageSetup:{orientation:'portrait',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:.35,right:.35,top:.45,bottom:.45,header:.2,footer:.2}}
+    });
+    sheet.columns=[{width:25},{width:58},{width:20}];
+    sheet.mergeCells('A1:C1'); sheet.getCell('A1').value=(state.settings.npp||'THUẦN VIỆT FOODY').toUpperCase()+' – PHIẾU LƯƠNG THÁNG';
+    sheet.getCell('A1').font={name:'Arial',size:15,bold:true,color:{argb:'FFFFFFFF'}};
+    sheet.getCell('A1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF7A1F24'}};
+    sheet.getCell('A1').alignment={horizontal:'center',vertical:'middle'}; sheet.getRow(1).height=30;
+    sheet.mergeCells('A2:C2'); sheet.getCell('A2').value='NVBH: '+(state.settings.nvbh||'—')+'  |  Kỳ tính: '+summary.period.label;
+    sheet.getCell('A2').font={name:'Arial',size:10,bold:true,color:{argb:'FF4B3228'}}; sheet.getCell('A2').alignment={horizontal:'center',vertical:'middle'}; sheet.getRow(2).height=20;
+    const overview=[['Doanh số tháng',summary.revenue],['Target tháng',summary.target],['Tỷ lệ đạt',summary.salesRate/100],['Ngày công được duyệt',summary.attendanceDays]];
+    overview.forEach((row,index)=>{ const excelRow=sheet.getRow(index+4); excelRow.getCell(1).value=row[0]; excelRow.getCell(2).value=row[1]; excelRow.getCell(1).font={name:'Arial',bold:true}; excelRow.getCell(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2E7DF'}}; applyExcelBorder(excelRow,1,2); applyExcelMiddleAlign(excelRow,1,2); });
+    sheet.getCell('B4').numFmt='#,##0 "đ"'; sheet.getCell('B5').numFmt='#,##0 "đ"'; sheet.getCell('B6').numFmt='0.0%'; sheet.getCell('B7').numFmt='0.0';
+    const header=sheet.getRow(9); header.values=['Khoản mục','Điều kiện / cách tính','Số tiền']; header.font={name:'Arial',bold:true,color:{argb:'FFFFFFFF'}}; header.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF7A1F24'}}; applyExcelBorder(header,1,3); applyExcelMiddleAlign(header,1,3);
+    payrollRows(summary).forEach(row=>{ const excelRow=sheet.addRow(row); excelRow.font={name:'Arial',size:10,color:{argb:'FF28211E'}}; excelRow.height=28; applyExcelBorder(excelRow,1,3); applyExcelMiddleAlign(excelRow,1,3); excelRow.getCell(3).numFmt='#,##0 "đ"'; excelRow.getCell(3).alignment={horizontal:'right',vertical:'middle'}; excelRow.getCell(2).alignment={wrapText:true,vertical:'middle'}; });
+    const totalRow=sheet.addRow(['TỔNG TIỀN TẠM TÍNH','',summary.total]); totalRow.font={name:'Arial',size:11,bold:true,color:{argb:'FF5B3A13'}}; totalRow.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF3D4'}}; applyExcelBorder(totalRow,1,3); applyExcelMiddleAlign(totalRow,1,3); totalRow.getCell(3).numFmt='#,##0 "đ"'; totalRow.getCell(3).alignment={horizontal:'right',vertical:'middle'};
+    sheet.mergeCells(totalRow.number,1,totalRow.number,2); sheet.autoFilter={from:{row:9,column:1},to:{row:totalRow.number-1,column:3}}; sheet.pageSetup.printArea='A1:C'+totalRow.number; sheet.headerFooter.oddFooter='Trang &P / &N';
+    return workbook;
+  }
+  async function exportPayrollExcel(){
+    const summary=state.payroll.summary;
+    if(!summary){ setPayrollStatus('Chưa có dữ liệu lương để xuất.',true); return; }
+    await runButtonAction(document.getElementById('btnExportPayrollExcel'),'Đang tạo Excel…',async ()=>{
+      try{
+        const buffer=await buildPayrollExcelWorkbook(summary).xlsx.writeBuffer();
+        const url=URL.createObjectURL(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+        const link=document.createElement('a'); link.href=url; link.download='Phieu-luong_'+summary.period.monthStart+'.xlsx'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),0);
+        setPayrollStatus('Đã xuất phiếu lương Excel.',false);
+      }catch(error){ console.error(error); setPayrollStatus(error.message||'Không thể xuất phiếu lương.',true); }
+    });
   }
 
   // ---------- FINALIZE / REPORT ----------
@@ -2435,6 +2628,7 @@
   async function renderReportTab(){
     if(!state.user) return;
     await renderReportOverview();
+    await loadPayrollSummary();
     if(!navigator.onLine) return;
     const mKey = monthKey(state.date);
     const [reports,opening] = await Promise.all([
@@ -2904,6 +3098,8 @@
   document.getElementById('btnCancelOrderEdit').addEventListener('click',cancelOrderEdit);
   document.getElementById('btnFinalize').addEventListener('click', finalizeDay);
   document.getElementById('btnExportExcel').addEventListener('click',exportOrdersExcel);
+  document.getElementById('btnSavePayrollAttendance').addEventListener('click',savePayrollAttendance);
+  document.getElementById('btnExportPayrollExcel').addEventListener('click',exportPayrollExcel);
   document.getElementById('btnSaveSettings').addEventListener('click', saveSettingsForm);
   document.getElementById('btnRetryOnline').addEventListener('click',async ()=>{
     syncOnlineState();

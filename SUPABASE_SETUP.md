@@ -25,6 +25,11 @@
    năm 2025–2026. Frontend release `20260727.13` cần migration này để hiển thị
    tên lễ/Tết và ngày nghỉ bù; nếu bảng chưa sẵn sàng, lịch vẫn cho chọn ngày
    và chỉ đánh dấu Chủ nhật.
+   Migration `202608030001_monthly_payroll_inputs.sql` t?o b?ng nh?p ng?y c?ng
+   ???c duy?t theo t?i kho?n v? th?ng, c? RLS. Ph?i ?p d?ng migration n?y tr??c
+   frontend release `20260803.2`; n?u ch?a ?p d?ng, ph?n T?m t?nh l??ng th?ng
+   kh?ng th? t?i ho?c l?u ng?y c?ng.
+
 2. Trong **Authentication > URL Configuration**:
    - đặt Site URL bằng URL triển khai ứng dụng;
    - thêm URL triển khai và URL localhost vào Redirect URLs.

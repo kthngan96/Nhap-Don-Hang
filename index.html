@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260730.4">
+<link rel="stylesheet" href="styles.css?v=20260803.2">
 </head>
 <body>
 <section class="auth-shell" id="authShell">
@@ -226,6 +226,37 @@
         <div class="stat-box"><div class="v" id="reportAverage">0</div><div class="l">TB/Đơn</div></div>
         <div class="stat-box"><div class="v" id="reportSalaryDays">0</div><div class="l">Số ngày lương</div></div>
       </div>
+      <div class="card payroll-card" id="payrollCard" aria-busy="false">
+        <h2><span class="section-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg></span> Tạm tính lương tháng</h2>
+        <p class="hint" id="payrollPeriod">Kỳ tính: —</p>
+        <div class="payroll-attendance">
+          <div class="field">
+            <label for="payrollAttendanceDays">Ngày công được duyệt</label>
+            <input type="number" id="payrollAttendanceDays" min="0" max="26" step="0.5" inputmode="decimal" placeholder="0–26">
+          </div>
+          <button class="btn btn-primary" id="btnSavePayrollAttendance" type="button">Lưu ngày công</button>
+        </div>
+        <div class="payroll-status" id="payrollStatus" role="status" aria-live="polite"></div>
+        <div class="payroll-overview">
+          <div><span>Doanh số tháng</span><strong id="payrollRevenue">—</strong></div>
+          <div><span>Target tháng</span><strong id="payrollTarget">—</strong></div>
+          <div><span>Tỷ lệ đạt</span><strong id="payrollSalesRate">—</strong></div>
+          <div><span>Ngày đạt chỉ tiêu</span><strong id="payrollDailyAchievement">—</strong></div>
+        </div>
+        <div class="payroll-table-wrap">
+          <table class="payroll-table">
+            <thead><tr><th>Khoản mục</th><th>Điều kiện / cách tính</th><th class="num">Số tiền</th></tr></thead>
+            <tbody id="payrollBreakdown"></tbody>
+            <tfoot><tr><th colspan="2">Tổng tiền tạm tính</th><th class="num" id="payrollTotal">—</th></tr></tfoot>
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-gold btn-export-excel" id="btnExportPayrollExcel" type="button">
+            <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            Xuất phiếu lương Excel
+          </button>
+        </div>
+      </div>
       <div class="card">
         <h2><span class="section-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg></span> Chốt ngày</h2>
         <p class="hint">Bấm nút bên dưới để tính báo cáo cuối ngày theo đúng mẫu và lưu lại để cộng dồn vào tháng. Nếu đơn hàng có thay đổi sau khi đã chốt, bấm lại nút này để cập nhật.</p>
@@ -436,6 +467,6 @@
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="app.js?v=20260803.1"></script>
+<script src="app.js?v=20260803.2"></script>
 </body>
 </html>
