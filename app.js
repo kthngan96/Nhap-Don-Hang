@@ -28,6 +28,8 @@
     'Thành phố Trà Vinh'
   ];
   const HISTORY_PAGE_SIZE = 30;
+  const ORDER_DRAFT_STORAGE_PREFIX = 'nhap-don-hang:order-draft:v1:';
+  const ORDER_DRAFT_SAVE_DELAY = 350;
   const AVATAR_BUCKET = 'avatars';
   const AVATAR_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
   const AVATAR_SIZE = 512;
@@ -110,6 +112,7 @@
     pendingLocation: null,
     editingOrderId: null,
     orderDraftBeforeEdit: null,
+    orderDraftSaveTimer: null,
     avatarUrl: '',
     avatarBusy: false,
     history:createHistoryState(),
@@ -714,6 +717,7 @@
       await maybeImportLegacyData();
       await Promise.all([loadSettings(), loadOrdersForDate(state.date)]);
       renderProductRows();
+      restoreOrderFormDraft();
       renderToday();
       renderSettingsForm();
       await renderReportTab();
@@ -1245,6 +1249,45 @@
       capturedAt:location.capturedAt || null
     };
   }
+  function orderDraftStorageKey(){
+    return state.user && state.user.id
+      ? ORDER_DRAFT_STORAGE_PREFIX+state.user.id+':'+state.date
+      : '';
+  }
+  function saveOrderFormDraft(){
+    if(state.editingOrderId) return;
+    const key=orderDraftStorageKey();
+    if(!key) return;
+    try{
+      localStorage.setItem(key,JSON.stringify(captureOrderFormDraft()));
+    }catch(error){
+      console.warn('Unable to save order draft.',error);
+    }
+  }
+  function scheduleOrderFormDraftSave(){
+    if(state.editingOrderId) return;
+    clearTimeout(state.orderDraftSaveTimer);
+    state.orderDraftSaveTimer=setTimeout(saveOrderFormDraft,ORDER_DRAFT_SAVE_DELAY);
+  }
+  function clearOrderFormDraft(){
+    clearTimeout(state.orderDraftSaveTimer);
+    state.orderDraftSaveTimer=null;
+    const key=orderDraftStorageKey();
+    if(!key) return;
+    try{ localStorage.removeItem(key); }catch(error){ console.warn('Unable to clear order draft.',error); }
+  }
+  function restoreOrderFormDraft(){
+    if(state.editingOrderId) return;
+    const key=orderDraftStorageKey();
+    if(!key) return;
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw) applyOrderFormDraft(JSON.parse(raw));
+    }catch(error){
+      console.warn('Unable to restore order draft.',error);
+      try{ localStorage.removeItem(key); }catch(ignore){}
+    }
+  }
   function captureOrderFormDraft(){
     const quantities={};
     PRODUCTS.forEach(product=>{
@@ -1420,6 +1463,7 @@
       const {error} = await client.from('orders').insert(orderToRow(order,state.date));
       if(error){ showToast(dbError(error,'Không thể lưu đơn hàng.').message); return; }
       state.orders.push(order);
+      clearOrderFormDraft();
       invalidateHistory();
       refreshReportOverviewForDate(order.workDate);
       resetOrderForm();
@@ -1638,6 +1682,7 @@
       setLocationStatus('error',geolocationErrorMessage(error),previousLocation);
     }finally{
       addButton.disabled=false;
+      scheduleOrderFormDraftSave();
       syncOnlineState();
     }
   }
@@ -1989,7 +2034,7 @@
         : '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Xuất Excel';
     }
   }
-  function setReportOverviewValues(orderCount,revenue,giaVi){
+  function setReportOverviewValues(orderCount,revenue,giaVi,salaryDays){
     const hasValues=orderCount!==null;
     document.getElementById('reportOrderCount').textContent=hasValues ? orderCount : '—';
     document.getElementById('reportRevenue').textContent=hasValues ? fmtVND(revenue)+' đ' : '—';
@@ -1997,6 +2042,14 @@
     document.getElementById('reportAverage').textContent=hasValues
       ? fmtVND(orderCount ? revenue/orderCount : 0)+' đ'
       : '—';
+    document.getElementById('reportSalaryDays').textContent=hasValues ? salaryDays : '—';
+  }
+  async function computeSalaryDays(dateFrom,dateTo,userId){
+    const {data,error}=await client.from('daily_reports').select('work_date,order_count')
+      .eq('user_id',userId)
+      .gte('work_date',dateFrom).lte('work_date',dateTo);
+    throwQueryError(error,'Kh?ng th? t?nh s? ng?y l??ng.');
+    return (data||[]).filter(report=>Number(report.order_count)>0).length;
   }
   function setReportOverviewStatus(message,isError){
     const status=document.getElementById('reportOverviewStatus');
@@ -2265,11 +2318,14 @@
     setReportOverviewValues(null,0,0);
     setReportOverviewStatus('Đang tải tổng quan…',false);
     try{
-      const rows=await getOrdersForReportOverview(dateFrom,dateTo,requestId,state.user.id);
+      const [rows,salaryDays]=await Promise.all([
+        getOrdersForReportOverview(dateFrom,dateTo,requestId,state.user.id),
+        computeSalaryDays(dateFrom,dateTo,state.user.id)
+      ]);
       if(!rows || requestId!==overview.requestId) return;
       const revenue=rows.reduce((sum,order)=>sum+orderRevenue(order),0);
       const giaVi=rows.reduce((sum,order)=>sum+orderGiaVi(order),0);
-      setReportOverviewValues(rows.length,revenue,giaVi);
+      setReportOverviewValues(rows.length,revenue,giaVi,salaryDays);
       const rangeLabel=dateFrom===dateTo
         ? 'ngày '+fmtDateVN(dateFrom)
         : fmtDateVN(dateFrom)+' – '+fmtDateVN(dateTo);
@@ -2745,6 +2801,8 @@
     renderSelectedDate();
     try{
       await loadOrdersForDate(state.date);
+      resetOrderForm();
+      restoreOrderFormDraft();
       renderToday();
       await renderReportTab();
     }catch(error){ showToast(error.message); }
@@ -2793,6 +2851,8 @@
     });
   });
   document.getElementById('btnLocation').addEventListener('click',captureLocation);
+  document.getElementById('tab-order').addEventListener('input',scheduleOrderFormDraftSave);
+  document.getElementById('tab-order').addEventListener('change',scheduleOrderFormDraftSave);
   document.getElementById('todayList').addEventListener('toggle',event=>{
     const menu=event.target.closest('.order-menu');
     if(!menu) return;
