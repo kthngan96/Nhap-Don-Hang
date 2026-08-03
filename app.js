@@ -565,6 +565,14 @@
     if(error && (error.status===401 || error.status===403)) return new Error('Phiên đăng nhập đã hết hạn.');
     return new Error(fallback || 'Không thể đồng bộ dữ liệu. Vui lòng thử lại.');
   }
+  function payrollInputError(error, fallback){
+    console.error(error);
+    const detail=[error && error.code,error && error.message,error && error.details].filter(Boolean).join(' ').toLowerCase();
+    if(detail.includes('monthly_payroll_inputs') && (detail.includes('does not exist') || detail.includes('schema cache') || detail.includes('pgrst205') || detail.includes('42p01'))){
+      return new Error('Chưa áp dụng migration dữ liệu lương trên Supabase. Vui lòng chạy migration 202608030001_monthly_payroll_inputs.sql rồi thử lại.');
+    }
+    return dbError(error,fallback);
+  }
   function throwQueryError(error, fallback){
     if(error) throw dbError(error, fallback);
   }
@@ -2364,7 +2372,7 @@
   async function getPayrollAttendance(monthStart){
     const {data,error}=await client.from('monthly_payroll_inputs').select('attendance_days')
       .eq('user_id',state.user.id).eq('month_start',monthStart).maybeSingle();
-    throwQueryError(error,'Không thể tải ngày công được duyệt.');
+    if(error) throw payrollInputError(error,'Không thể tải ngày công được duyệt.');
     return data ? Number(data.attendance_days)||0 : 0;
   }
   async function getMonthlyPayrollData(monthStart,throughDate){
@@ -2503,7 +2511,7 @@
       const {error}=await client.from('monthly_payroll_inputs').upsert({
         user_id:state.user.id,month_start:period.monthStart,attendance_days:value
       },{onConflict:'user_id,month_start'});
-      if(error){ setPayrollStatus(dbError(error,'Không thể lưu ngày công.').message,true); return; }
+      if(error){ setPayrollStatus(payrollInputError(error,'Không thể lưu ngày công.').message,true); return; }
       await loadPayrollSummary();
       showToast('Đã lưu ngày công tháng');
     });
