@@ -2487,7 +2487,7 @@
 
     const text =
 `Báo cáo ngày : ${fmtDateVN(state.date)}
-- Npp: ${s.npp}
+- NPP: ${s.npp}
 - NVBH: ${s.nvbh}
 - Tiến độ thời gian:
 1. Doanh số thực hiện (ĐVT: 1000đ)
