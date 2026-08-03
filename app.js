@@ -1329,7 +1329,7 @@
 
     const text =
 `Báo cáo ngày : ${fmtDateVN(state.date)}
-- Npp: ${s.npp}
+- NPP: ${s.npp}
 - NVBH: ${s.nvbh}
 - Tiến độ thời gian: ${daysReported}/${s.workDays} ngày (${pctTienDo.toFixed(0)}%)
 1. Doanh số thực hiện (ĐVT: 1000đ)
@@ -1369,9 +1369,9 @@
       '<input type="number" inputmode="numeric" id="price_'+p.id+'" value="'+priceOf(p.id)+'"></div>'
     ).join('');
 
-    document.getElementById('hdrNppNvbh').textContent = 'Npp: '+s.npp+' · NVBH: '+s.nvbh;
+    document.getElementById('hdrNppNvbh').textContent = 'NPP: '+s.npp+' · NVBH: '+s.nvbh;
     document.getElementById('workContextCopy').innerHTML =
-      '<strong>Npp:</strong> '+esc(s.npp)+'<br><strong>NVBH:</strong> '+esc(s.nvbh);
+      '<strong>NPP:</strong> '+esc(s.npp)+'<br><strong>NVBH:</strong> '+esc(s.nvbh);
   }
 
   async function saveSettingsForm(){
